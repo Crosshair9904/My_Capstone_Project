@@ -3,6 +3,7 @@ from supabase import create_client, Client
 import webbrowser
 
 
+
 #TO RUN APP: RUN THE CODE AND TAKE THE PATH AND USE THE RUN COMMAND IN TERMINAL
 
 #all the pages setup

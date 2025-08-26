@@ -35,8 +35,8 @@ background()
 #REMEMBER TO ADD WHAT IS NEEDED FOR COPYWRITE ON GOOGLE LOGIN
 
 
-st.title("Home")
-st.header("Hello. Let's get started shall we?")
+
+
 
 
 
@@ -88,70 +88,108 @@ def display_tasks():
     for index, task in enumerate(st.session_state.tasks):
     # uses enumerate to iterate through all the data while keeping track of the indexs to sort the data
     # uses index to allow for multiple of the same variable to exist and have different stored data at the same time
-    
-        with st.expander(task['name'], expanded=False,): #adds the name of each task on it's respective tab
-            col1, col2 = st.columns(2)  # create two columns for compact layout
-            with col1: # first column
-                task['name'] = st.text_input("Name", value=task['name'], key=f"name_{index}")
-                task['course'] = st.selectbox("Course", st.session_state.courses_list, index=st.session_state.courses_list.index(task['course']), key=f"course_{index}")
-                task['due_date'] = st.date_input("Due Date", value=task['due_date'], key=f"date_{index}")
-            with col2: # second column
-                task['status'] = st.select_slider("Status", ["Not Started", "In-Progress", "Near Completion", "Complete"], value=task['status'], key=f"status_{index}")
-                task['priority'] = st.select_slider("Priority", ["Low", "Medium", "High"], value=task['priority'], key=f"priority_{index}")
-                task['effort'] = st.slider("Effort", min_value=1, max_value=5, value=task['effort'], key=f"effort_{index}")
-            
-            #Action Buttons
-            col1, col2 = st.columns(2)
-            with col1:
-                col1a, col2a = st.columns(2)
-                with col1a:
-                    if st.button(f"Update Task {index + 1}", key=f"update_button_{index}"):
-                        st.session_state.tasks[index] = task
-                        update_today_tasks()  
-                with col2a:
-                    if st.button(f"Mark As Complete", key=f"mark_complete_button_{index}"):
-                        task['status'] = "Complete"
-                        update_today_tasks()  
-                    
-                with col2:    
-                    # Delete button
-                    with st.expander("Delete Task"):
-                        if st.button(f"Delete Task {index + 1}", key=f"delete_{index}"):
-                            del st.session_state.tasks[index] #deletes the task information from the place of which it is stored
-                            update_today_tasks()
-                            break  # exit the loop to refresh the display
-            with col2:
-                # Notes Section
-                st.title("Notes")
-
-                # section to jot down a few notes (not uploaded file)
-                written_notes = st.text_area("Jot Down Some Notes Here:", key=f"notes_{index}")
-    
-                # Area for a to-do list (button to access)
-                
-                # section to upload a file
-                with st.expander("Upload Notes"):
-                    uploaded_files = st.file_uploader(
-                    "Import Your Notes Here:", accept_multiple_files=True, key=f"uploaded_files_{index}",
-                    )
-                    
-
-                # expander to show the file
-
-            
-
-
+        col1, col2 = st.columns([0.76, 3])
 
         with col1:
-            # AI Section
+            # Color
+            color_index = st.session_state.courses_list.index(task['course'])
+            color = st.session_state.courses_colors[color_index]
+            
 
-            st.title("AI")
+            # Define your RGB color
+            rgb_color = color # Example: Tomato red
 
-            # Create quizzes or study questions from notes ()
-        #- Answer questions from the notes, summarize them, do additional research
-        #- Create a task manager to divide work into easier chunks that the user can tick off
-        #- Record a lecture or brainstorm session and summarize content into notes or a vision board
-        #- Find additional resources to help with comprehension and studying
+            st.markdown(
+                f"""
+                <span style="
+                    background-color: {rgb_color};
+                    color: white; /* Text color for contrast */
+                    padding: 5px 10px;
+                    border-radius: 5px;
+                    font-weight: bold;
+                ">
+                    {task['course']}
+                
+                """,
+                unsafe_allow_html=True
+)
+
+
+        with col2:
+            with st.expander(task['name'], expanded=False,): #adds the name of each task on it's respective tab
+                col1, col2 = st.columns(2)  # create two columns for compact layout
+                with col1: # first column
+                    task['name'] = st.text_input("Name", value=task['name'], key=f"name_{index}")
+                    task['course'] = st.selectbox("Course", st.session_state.courses_list, index=st.session_state.courses_list.index(task['course']), key=f"course_{index}")
+                    task['due_date'] = st.date_input("Due Date", value=task['due_date'], key=f"date_{index}")
+                with col2: # second column
+                    task['status'] = st.select_slider("Status", ["Not Started", "In-Progress", "Near Completion", "Complete"], value=task['status'], key=f"status_{index}")
+                    task['priority'] = st.select_slider("Priority", ["Low", "Medium", "High"], value=task['priority'], key=f"priority_{index}")
+                    task['effort'] = st.slider("Effort", min_value=1, max_value=5, value=task['effort'], key=f"effort_{index}")
+                
+                #Action Buttons
+                col1, col2 = st.columns(2)
+                with col1:
+                    col1a, col2a = st.columns(2)
+                    with col1a:
+                        if st.button(f"Update Task {index + 1}", key=f"update_button_{index}"):
+                            st.session_state.tasks[index] = task
+                            update_today_tasks()  
+                    with col2a:
+                        if st.button(f"Mark As Complete", key=f"mark_complete_button_{index}"):
+                            task['status'] = "Complete"
+                            update_today_tasks()  
+                        
+                    with col2:    
+                        # Delete button
+                        with st.expander("Delete Task"):
+                            if st.button(f"Delete Task {index + 1}", key=f"delete_{index}"):
+                                del st.session_state.tasks[index] #deletes the task information from the place of which it is stored
+                                update_today_tasks()
+                                break  # exit the loop to refresh the display
+                with col2:
+                    # Notes Section
+                    st.title("Notes")
+
+                    # section to jot down a few notes (not uploaded file)
+                    written_notes = st.text_area("Jot Down Some Notes Here:", key=f"notes_{index}")
+        
+                    # Area for a to-do list (button to access)
+                    
+                    # section to upload a file
+                    with st.expander("Upload Notes"):
+                        uploaded_files = st.file_uploader(
+                        "Import Your Notes Here:", accept_multiple_files=True, key=f"uploaded_files_{index}",
+                        )
+                        
+
+                    # expander to show the file
+                    with st.expander("Display File"):
+                        if uploaded_files: # Check if the list is not empty
+                            for uploaded_file in uploaded_files:
+                                st.subheader(f"File: {uploaded_file.name}")
+                                st.write(f"Type: {uploaded_file.type}")
+                                st.write(f"Size: {uploaded_file.size} bytes")
+
+                                if "text" in uploaded_file.type:
+                                    string_data = uploaded_file.getvalue().decode("utf-8")
+                                    st.text_area("Content:", value=string_data, height=200)
+                                elif "image" in uploaded_file.type:
+                                    st.image(uploaded_file, caption=f"Image: {uploaded_file.name}")
+                
+
+
+
+            with col1:
+                # AI Section
+
+                st.title("AI")
+
+                # Create quizzes or study questions from notes ()
+            #- Answer questions from the notes, summarize them, do additional research
+            #- Create a task manager to divide work into easier chunks that the user can tick off
+            #- Record a lecture or brainstorm session and summarize content into notes or a vision board
+            #- Find additional resources to help with comprehension and studying
 
 
 
@@ -206,51 +244,66 @@ def display_completed_tasks():
 
 
 
+# Menu Layout
+col1, col2, col3 = st.columns([2.5, 3, 1])
+
+with col2:
+    st.markdown("# Home")
 
 
-# Collapsible form for adding new tasks with tabs
-with st.expander("Add New Task", expanded=False):
-    with st.form("Adding Tasks", clear_on_submit=True):
-        tab1, tab2, tab3 = st.tabs(["Task Details", "Additional Details", "Submit"]) 
-        
-        # Task Details
-        with tab1:
-            st.header("Task Details")
-            new_task = {
-                "name": st.text_input("Task Name:"),
-                "course": st.selectbox("Course:", st.session_state.courses_list),
-                "due_date": st.date_input("Due Date:")
-            }
-        
-        # Additional Details
-        with tab2:
-            st.header("Additional Details")
-            new_task["status"] = st.select_slider("Status:", ["Not Started", "In-Progress", "Near Completion", "Complete"])
-            new_task["priority"] = st.select_slider("Priority:", ["Low", "Medium", "High"])
-            new_task["effort"] = st.slider("Effort Required:", min_value=1, max_value=5)
+col1, col2, col3= st.columns([0.7, 1.75, 1])
 
-        # Submit
-        with tab3:
-            if st.form_submit_button("Submit"):
-                st.session_state.tasks.append(new_task)
-                update_today_tasks()
-                st.success("Task added!")
+with col2:
+
+    # Collapsible form for adding new tasks with tabs
+    with st.expander("Add New Task", expanded=False):
+        with st.form("Adding Tasks", clear_on_submit=True):
+            tab1, tab2, tab3 = st.tabs(["Task Details", "Additional Details", "Submit"]) 
+            
+            # Task Details
+            with tab1:
+                st.header("Task Details")
+                new_task = {
+                    "name": st.text_input("Task Name:"),
+                    "course": st.selectbox("Course:", st.session_state.courses_list),
+                    "due_date": st.date_input("Due Date:")
+                }
+            
+            # Additional Details
+            with tab2:
+                st.header("Additional Details")
+                new_task["status"] = st.select_slider("Status:", ["Not Started", "In-Progress", "Near Completion", "Complete"])
+                new_task["priority"] = st.select_slider("Priority:", ["Low", "Medium", "High"])
+                new_task["effort"] = st.slider("Effort Required:", min_value=1, max_value=5)
+
+            # Submit
+            with tab3:
+                if st.form_submit_button("Submit"):
+                    st.session_state.tasks.append(new_task)
+                    update_today_tasks()
+                    st.success("Task added!")
 
 
-# Display the list of tasks for editing
-if st.session_state.tasks:
+col1, col2, col3= st.columns([1, 1.75, 1])
+
+with col1:
+    # Display the list of tasks for editing
     st.subheader("Current Tasks")
-    display_tasks()
-else:
-    st.write("No Tasks Available.")
+    if st.session_state.tasks:
+        
+        display_tasks()
+    else:
+        st.write("No Tasks Available.")
 
-# Area for Complete Tasks
-if st.session_state.complete_tasks:
+with col3:
+    # Area for Complete Tasks
     st.subheader("Completed Tasks")
-    display_completed_tasks()
+    if st.session_state.complete_tasks:
+        
+        display_completed_tasks()
 
-else:
-    st.write("You Have Not Completed Any Tasks.")
+    else:
+        st.write("You Have Not Completed Any Tasks.")
 
 col1, col2= st.columns([1, 2.5])
 
