@@ -4,9 +4,6 @@ from streamlit_calendar import calendar
 import uuid
 import time
 from datetime import date, timedelta
-import pandas as pd
-from io import StringIO
-import openai
 from openai import OpenAI
 
 

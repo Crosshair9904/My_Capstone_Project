@@ -4,8 +4,6 @@ from streamlit_calendar import calendar
 import uuid
 import time
 from datetime import date, timedelta
-import pandas as pd
-from io import StringIO
 import openai
 
 #Background
@@ -33,7 +31,6 @@ def background():
 background()
 
 #REMEMBER TO ADD WHAT IS NEEDED FOR COPYWRITE ON GOOGLE LOGIN
-
 
 
 
