@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 USER_DATA = st.secrets["users"]
 
 # Set session timeout duration (e.g., 30 minutes)
-SESSION_TIMEOUT = timedelta(minutes=30)
+SESSION_TIMEOUT = timedelta(hours=252)
 
 def authenticate(username, password):
     """Authenticate user by checking their credentials."""
