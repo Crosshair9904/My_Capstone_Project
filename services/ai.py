@@ -5,6 +5,8 @@ import uuid
 import time
 from datetime import date, timedelta
 from openai import OpenAI
+import google.generativeai as genai 
+import os
 
 
 #Background
@@ -34,32 +36,29 @@ st.header("AI Tools")
 
 st.title("ChatGPT-like clone")
 
-client = OpenAI(api_key=st.secrets["API_KEY"])
+ # Load API key from Streamlit secrets or environment variable for security
+if "GEMENI_API_KEY" in st.secrets:
+    genai.configure(api_key=st.secrets["GEMENI_API_KEY"])
+else:
+    st.error("Gemini API Key not found. Please add it to your Streamlit secrets or environment variables.")
+    st.stop() # Stop the app if the key is missing
 
-if "openai_model" not in st.session_state:
-    st.session_state["openai_model"] = "gpt-3.5-turbo"
+model = genai.GenerativeModel('gemini-pro')
 
 if "messages" not in st.session_state:
-    st.session_state.messages = []
+    st.session_state.messages = [{"role": "model", "content": "Hello! How can I help you today?"}]
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-if prompt := st.chat_input("What is up?"):
+if prompt := st.chat_input("Ask me anything..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    with st.chat_message("assistant"):
-        stream = client.chat.completions.create(
-            model=st.session_state["openai_model"],
-            messages=[
-                {"role": m["role"], "content": m["content"]}
-                for m in st.session_state.messages
-            ],
-            stream=True,
-        )
-        response = st.write_stream(stream)
-    st.session_state.messages.append({"role": "assistant", "content": response})
+with st.chat_message("model"):
+    response = model.generate_content(prompt)
+    st.markdown(response.text)
+    st.session_state.messages.append({"role": "model", "content": response.text})
 
