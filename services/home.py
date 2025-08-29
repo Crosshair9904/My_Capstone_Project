@@ -304,8 +304,8 @@ with col1:
 # Indicator of what is due later in the same week
     st.subheader("Tasks Due Later This Week:")
 
-    if st.session_state.this_week_tasks:
-        for task_name in st.session_state.this_week_tasks:
+    if user_session['this_week_tasks']:
+        for task_name in user_session['this_week_tasks']:
             st.markdown(f"- **{task_name}**")
     else:
         st.write("No Tasks Due This Week")
