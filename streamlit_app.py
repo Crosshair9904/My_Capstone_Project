@@ -17,11 +17,30 @@ def authenticate(username, password):
         return True
     return False
 
+
+def get_user_session(username):
+    """Get or initialize session state for a specific user."""
+    if "user_sessions" not in st.session_state:
+        st.session_state["user_sessions"] = {}
+
+    if username not in st.session_state["user_sessions"]:
+        # Initialize user-specific session state
+        st.session_state["user_sessions"][username] = {
+        "courses_list": [],
+        "courses_colors": [],
+        "difficulty_ranking": []
+        }
+
+    return st.session_state["user_sessions"][username]
+
+
 def login(username):
     """Log in the user and set session state."""
     st.session_state["logged_in"] = True
     st.session_state["username"] = username
-    st.session_state["login_time"] = datetime.now()
+    st.session_state["login_time"] = datetime.now()  # Set login time
+    # Initialize user-specific session state
+    get_user_session(username)
 
 def logout():
     """Log out the user and clear session state."""
@@ -31,10 +50,11 @@ def logout():
 
 def check_session_timeout():
     """Log out the user if the session has expired."""
-    if (
-        "login_time" in st.session_state
-        and datetime.now() - st.session_state["login_time"] > SESSION_TIMEOUT
-    ):
+    login_time = st.session_state.get("login_time", None)  # Get login time or None
+    if login_time is None:
+        return  # Skip timeout check if login_time is not set
+
+    if datetime.now() - login_time > SESSION_TIMEOUT:
         st.warning("Session expired. Please log in again.")
         logout()
         st.rerun()
@@ -56,11 +76,36 @@ def login_page():
 
 def user_dashboard():
     """Display the user's dashboard."""
-    st.title(f"Welcome, {st.session_state['username']}!")
-    st.write("This is your personalized dashboard.")
-    if st.button("Logout"):
-        logout()
-        st.rerun()
+    
+    with st.sidebar:
+        st.title(f"Welcome, {st.session_state['username']}!")
+        st.write("This is your personalized dashboard.")
+        if st.button("Logout"):
+            logout()
+            st.rerun()
+    #all the pages setup
+    #logout_page = st.Page(logout, title="Log out", icon=":material/logout:")
+    settings = st.Page("services/settings.py", title="Settings", icon=":material/settings:")
+
+    home = st.Page(
+    "services/home.py",
+    title="Home",
+    icon=":material/home:",
+    )
+    ai = st.Page("services/ai.py", title="Ai Tools", icon=":material/network_intelligence:")
+
+    #defines page groups
+    account_pages = [settings]
+    services_pages = [home, ai]
+
+    page_dict = {}
+    page_dict["Services"] = services_pages
+
+
+    if len(page_dict) > 0:
+        pg = st.navigation({"Account": account_pages} | page_dict)
+
+    pg.run()
 
 def main():
     # Initialize session state variables
@@ -83,28 +128,5 @@ if __name__ == "__main__":
     main()
 
 
-#all the pages setup
-#logout_page = st.Page(logout, title="Log out", icon=":material/logout:")
-settings = st.Page("services/settings.py", title="Settings", icon=":material/settings:")
-
-home = st.Page(
-"services/home.py",
-title="Home",
-icon=":material/home:",
-)
-ai = st.Page("services/ai.py", title="Ai Tools", icon=":material/network_intelligence:")
-
-#defines page groups
-account_pages = [settings]
-services_pages = [home, ai]
-
-page_dict = {}
-page_dict["Services"] = services_pages
-
-
-if len(page_dict) > 0:
-    pg = st.navigation({"Account": account_pages} | page_dict)
-
-pg.run()
 
 

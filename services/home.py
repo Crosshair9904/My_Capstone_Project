@@ -30,216 +30,198 @@ def background():
     st.markdown(page_element, unsafe_allow_html=True)
 background()
 
-#REMEMBER TO ADD WHAT IS NEEDED FOR COPYWRITE ON GOOGLE LOGIN
+def get_user_session(username):
+    """Get or initialize session state for a specific user."""
+    if "user_sessions" not in st.session_state:
+        st.session_state["user_sessions"] = {}
 
+    if username not in st.session_state["user_sessions"]:
+        # Initialize user-specific session state
+        st.session_state["user_sessions"][username] = {
+            "courses_list": [],
+            "courses_colors": [],
+            "difficulty_ranking": [],
+            "tasks": [],
+            "complete_tasks": [],
+            "today_tasks": [],
+            "this_week_tasks": [],
+        }
 
+    return st.session_state["user_sessions"][username]
 
-
-
-
-
+# Get the logged-in user's session state
+user_session = get_user_session(st.session_state["username"])
 
 # Tell The User to Add Courses to The List If Not Done Already
-if 'courses_list' not in st.session_state:
+if not user_session["courses_list"]:
     st.warning("Please Enter Courses In Settings")
 
-
 # Initialize session state to hold tasks if it doesn't exist
-if 'tasks' not in st.session_state:
-    st.session_state.tasks = []
+if "tasks" not in user_session:
+    user_session["tasks"] = []
 
+# Initialize session state to hold complete tasks if it doesn't exist
+if "complete_tasks" not in user_session:
+    user_session["complete_tasks"] = []
 
-# Initialize session state to hold complete task if it doesn't exist
-if 'complete_tasks' not in st.session_state:
-    st.session_state.complete_tasks = []
+if "today_tasks" not in user_session:
+    user_session["today_tasks"] = []
 
-if 'today_tasks' not in st.session_state:
-    st.session_state.today_tasks = []
-
-if 'this_week_tasks' not in st.session_state:
-    st.session_state.this_week_tasks = []
+if "this_week_tasks" not in user_session:
+    user_session["this_week_tasks"] = []
 
 today = date.today()
 start = today - timedelta(days=today.weekday())
 end = start + timedelta(days=6)
 
 def update_today_tasks():
+    """Update today's and this week's tasks."""
     global today
-    # Update the list with tasks due today
-    st.session_state.today_tasks = [
-        task['name']
-        for task in st.session_state.tasks
-        if task['due_date'] == today
+    user_session["today_tasks"] = [
+        task["name"]
+        for task in user_session["tasks"]
+        if task["due_date"] == today
     ]
-    # Update the list with tasks due later in the same week
-    st.session_state.this_week_tasks = [
-        task['name']
-        for task in st.session_state.tasks
-        if task['due_date'] > start and task['due_date'] < end and task['due_date'] != today
+    user_session["this_week_tasks"] = [
+        task["name"]
+        for task in user_session["tasks"]
+        if start < task["due_date"] < end and task["due_date"] != today
     ]
 
-
-# Function to display and edit tasks
 def display_tasks():
+    """Display and edit tasks."""
     global today
-    for index, task in enumerate(st.session_state.tasks):
-    # uses enumerate to iterate through all the data while keeping track of the indexs to sort the data
-    # uses index to allow for multiple of the same variable to exist and have different stored data at the same time
-        col1, col2 = st.columns([0.76, 3])
+    for index, task in enumerate(user_session["tasks"]):
+        col1, col2 = st.columns([1.25, 3])
 
         with col1:
             # Color
-            color_index = st.session_state.courses_list.index(task['course'])
-            color = st.session_state.courses_colors[color_index]
-            
-
-            # Define your RGB color
-            rgb_color = color # Example: Tomato red
+            color_index = user_session["courses_list"].index(task["course"])
+            color = user_session["courses_colors"][color_index]
 
             st.markdown(
                 f"""
                 <span style="
-                    background-color: {rgb_color};
-                    color: white; /* Text color for contrast */
+                    background-color: {color};
+                    color: white;
                     padding: 5px 10px;
                     border-radius: 5px;
                     font-weight: bold;
                 ">
                     {task['course']}
-                
+                </span>
                 """,
-                unsafe_allow_html=True
-)
-
+                unsafe_allow_html=True,
+            )
 
         with col2:
-            with st.expander(task['name'], expanded=False,): #adds the name of each task on it's respective tab
-                col1, col2 = st.columns(2)  # create two columns for compact layout
-                with col1: # first column
-                    task['name'] = st.text_input("Name", value=task['name'], key=f"name_{index}")
-                    task['course'] = st.selectbox("Course", st.session_state.courses_list, index=st.session_state.courses_list.index(task['course']), key=f"course_{index}")
-                    task['due_date'] = st.date_input("Due Date", value=task['due_date'], key=f"date_{index}")
-                with col2: # second column
-                    task['status'] = st.select_slider("Status", ["Not Started", "In-Progress", "Near Completion", "Complete"], value=task['status'], key=f"status_{index}")
-                    task['priority'] = st.select_slider("Priority", ["Low", "Medium", "High"], value=task['priority'], key=f"priority_{index}")
-                    task['effort'] = st.slider("Effort", min_value=1, max_value=5, value=task['effort'], key=f"effort_{index}")
-                
-                #Action Buttons
+            with st.expander(task["name"], expanded=False):
                 col1, col2 = st.columns(2)
                 with col1:
-                    col1a, col2a = st.columns(2)
-                    with col1a:
-                        if st.button(f"Update Task {index + 1}", key=f"update_button_{index}"):
-                            st.session_state.tasks[index] = task
-                            update_today_tasks()  
-                    with col2a:
-                        if st.button(f"Mark As Complete", key=f"mark_complete_button_{index}"):
-                            task['status'] = "Complete"
-                            update_today_tasks()  
-                        
-                    with col2:    
-                        # Delete button
-                        with st.expander("Delete Task"):
-                            if st.button(f"Delete Task {index + 1}", key=f"delete_{index}"):
-                                del st.session_state.tasks[index] #deletes the task information from the place of which it is stored
-                                update_today_tasks()
-                                break  # exit the loop to refresh the display
+                    task["name"] = st.text_input("Name", value=task["name"], key=f"name_{index}")
+                    task["course"] = st.selectbox(
+                        "Course",
+                        user_session["courses_list"],
+                        index=user_session["courses_list"].index(task["course"]),
+                        key=f"course_{index}",
+                    )
+                    task["due_date"] = st.date_input("Due Date", value=task["due_date"], key=f"date_{index}")
                 with col2:
-                    # Notes Section
-                    st.title("Notes")
+                    task["status"] = st.select_slider(
+                        "Status",
+                        ["Not Started", "In-Progress", "Near Completion", "Complete"],
+                        value=task["status"],
+                        key=f"status_{index}",
+                    )
+                    task["priority"] = st.select_slider(
+                        "Priority",
+                        ["Low", "Medium", "High"],
+                        value=task["priority"],
+                        key=f"priority_{index}",
+                    )
+                    task["effort"] = st.slider("Effort", min_value=1, max_value=5, value=task["effort"], key=f"effort_{index}")
 
-                    # section to jot down a few notes (not uploaded file)
-                    written_notes = st.text_area("Jot Down Some Notes Here:", key=f"notes_{index}")
-        
-                    # Area for a to-do list (button to access)
-                    
-                    # section to upload a file
-                    with st.expander("Upload Notes"):
-                        uploaded_files = st.file_uploader(
-                        "Import Your Notes Here:", accept_multiple_files=True, key=f"uploaded_files_{index}",
-                        )
-                        
+                # Action Buttons
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button(f"Update Task {index + 1}", key=f"update_button_{index}"):
+                        user_session["tasks"][index] = task
+                        update_today_tasks()
+                    if st.button(f"Mark As Complete", key=f"mark_complete_button_{index}"):
+                        task["status"] = "Complete"
+                        update_today_tasks()
 
-                    # expander to show the file
-                    with st.expander("Display File"):
-                        if uploaded_files: # Check if the list is not empty
-                            for uploaded_file in uploaded_files:
-                                st.subheader(f"File: {uploaded_file.name}")
-                                st.write(f"Type: {uploaded_file.type}")
-                                st.write(f"Size: {uploaded_file.size} bytes")
+                with col2:
+                    if st.button(f"Delete Task {index + 1}", key=f"delete_{index}"):
+                        del user_session["tasks"][index]
+                        update_today_tasks()
+                        break
 
-                                if "text" in uploaded_file.type:
-                                    string_data = uploaded_file.getvalue().decode("utf-8")
-                                    st.text_area("Content:", value=string_data, height=200)
-                                elif "image" in uploaded_file.type:
-                                    st.image(uploaded_file, caption=f"Image: {uploaded_file.name}")
-                
+                # Notes Section
+                st.title("Notes")
+                written_notes = st.text_area("Jot Down Some Notes Here:", key=f"notes_{index}")
 
+                # File Upload
+                with st.expander("Upload Notes"):
+                    uploaded_files = st.file_uploader(
+                        "Import Your Notes Here:", accept_multiple_files=True, key=f"uploaded_files_{index}"
+                    )
+                    if uploaded_files:
+                        for uploaded_file in uploaded_files:
+                            st.subheader(f"File: {uploaded_file.name}")
+                            if "text" in uploaded_file.type:
+                                string_data = uploaded_file.getvalue().decode("utf-8")
+                                st.text_area("Content:", value=string_data, height=200)
+                            elif "image" in uploaded_file.type:
+                                st.image(uploaded_file, caption=f"Image: {uploaded_file.name}")
 
+                # Completed Tasks Sorting
+                if task["status"] == "Complete":
+                    user_session["complete_tasks"].append(user_session["tasks"][index])
+                    del user_session["tasks"][index]
+                    update_today_tasks()
+                    break
 
+def display_completed_tasks():
+    """Display completed tasks."""
+    for index, task in enumerate(user_session["complete_tasks"]):
+        with st.expander(task["name"], expanded=False):
+            col1, col2 = st.columns(2)
             with col1:
-                # AI Section
+                task["name"] = st.text_input("Name", value=task["name"], key=f"completed_name_{index}")
+                task["course"] = st.selectbox(
+                    "Course",
+                    user_session["courses_list"],
+                    index=user_session["courses_list"].index(task["course"]),
+                    key=f"completed_course_{index}",
+                )
+                task["due_date"] = st.date_input("Date Completed", value=task["due_date"], key=f"completed_date_{index}")
+            with col2:
+                task["status"] = st.select_slider(
+                    "Status",
+                    ["Not Started", "In-Progress", "Near Completion", "Complete"],
+                    value=task["status"],
+                    key=f"completed_status_{index}",
+                )
+                task["priority"] = st.select_slider(
+                    "Priority",
+                    ["Low", "Medium", "High"],
+                    value=task["priority"],
+                    key=f"completed_priority_{index}",
+                )
+                task["effort"] = st.slider("Effort", min_value=1, max_value=5, value=task["effort"], key=f"completed_effort_{index}")
 
-                st.title("AI")
-
-                # Create quizzes or study questions from notes ()
-            #- Answer questions from the notes, summarize them, do additional research
-            #- Create a task manager to divide work into easier chunks that the user can tick off
-            #- Record a lecture or brainstorm session and summarize content into notes or a vision board
-            #- Find additional resources to help with comprehension and studying
-
-
-
-
-
-
-
-
-            #Completed Tasks Sorting
-            if task['status'] == "Complete":
-                st.session_state.complete_tasks.append(st.session_state.tasks[index])
-                del st.session_state.tasks[index]
+            # Buttons
+            if st.button(f"Move to Active Tasks List", key=f"re_add_{index}"):
+                task["status"] = "In-Progress"
+                user_session["tasks"].append(user_session["complete_tasks"][index])
+                del user_session["complete_tasks"][index]
                 update_today_tasks()
                 break
-
-            
-
-
-
-# Display to view completed tasks
-def display_completed_tasks():
-    for index, task in enumerate(st.session_state.complete_tasks):
-         with st.expander(task['name'], expanded=False,):
-            col1, col2 = st.columns(2)  # create two columns for compact layout
-            with col1: # first column
-                task['name'] = st.text_input("Name", value=task['name'], key=f"completed_name_{index},")
-                task['course'] = st.selectbox("Course", st.session_state.courses_list, index=st.session_state.courses_list.index(task['course']), key=f"completed_course_{index}")
-                task['due_date'] = st.date_input("Date Completed", value=task['due_date'], key=f"completed_date_{index}")
-            with col2: # second column
-                task['status'] = st.select_slider("Status", ["Not Started", "In-Progress", "Near Completion", "Complete"], value=task['status'], key=f"completed_status_{index}")
-                task['priority'] = st.select_slider("Priority", ["Low", "Medium", "High"], value=task['priority'], key=f"completed_priority_{index}")
-                task['effort'] = st.slider("Effort", min_value=1, max_value=5, value=task['effort'], key=f"completed_effort_{index}")
-
-
-            col1, col2 = st.columns(2)
-            # Button To Add A Task Back To Tasks List
-            with col1:
-                if st.button(f"Move to Active Tasks List", key=f"re_add_{index},"):
-                    task['status'] = 'In-Progress'
-                    st.session_state.tasks.append(st.session_state.complete_tasks[index])
-                    del st.session_state.complete_tasks[index]
-                    update_today_tasks()
-                    break
-
-
-            # Button to remove task from completed list
-            with col2:
-                if st.button(f"Delete From Completed Tasks List", key=f"remove_from_completed_list_{index},"):
-                    del st.session_state.complete_tasks[index]
-                    update_today_tasks()
-                    break
-
-
+            if st.button(f"Delete From Completed Tasks List", key=f"remove_from_completed_list_{index}"):
+                del user_session["complete_tasks"][index]
+                update_today_tasks()
+                break
 
 # Menu Layout
 col1, col2, col3 = st.columns([2.5, 3, 1])
@@ -248,7 +230,7 @@ with col2:
     st.markdown("# Home")
 
 
-col1, col2, col3= st.columns([0.7, 1.75, 1])
+col1, col2, col3= st.columns([1, 1.75, 1])
 
 with col2:
 
@@ -262,7 +244,7 @@ with col2:
                 st.header("Task Details")
                 new_task = {
                     "name": st.text_input("Task Name:"),
-                    "course": st.selectbox("Course:", st.session_state.courses_list),
+                    "course": st.selectbox("Course:", user_session["courses_list"]),
                     "due_date": st.date_input("Due Date:")
                 }
             
@@ -276,31 +258,32 @@ with col2:
             # Submit
             with tab3:
                 if st.form_submit_button("Submit"):
-                    st.session_state.tasks.append(new_task)
+                    user_session["tasks"].append(new_task)
                     update_today_tasks()
                     st.success("Task added!")
 
 
-col1, col2, col3= st.columns([1, 1.75, 1])
+col1, col2 =st.columns([2, 1])
 
 with col1:
     # Display the list of tasks for editing
     st.subheader("Current Tasks")
-    if st.session_state.tasks:
+    if user_session['tasks']:
         
         display_tasks()
     else:
         st.write("No Tasks Available.")
 
-with col3:
+with col2:
     # Area for Complete Tasks
     st.subheader("Completed Tasks")
-    if st.session_state.complete_tasks:
+    if user_session['complete_tasks']:
         
         display_completed_tasks()
 
     else:
         st.write("You Have Not Completed Any Tasks.")
+
 
 col1, col2= st.columns([1, 2.5])
 
@@ -311,8 +294,8 @@ with col1:
     st.subheader("Tasks Due Today:")    #if st.button("Clear List of Today's Tasks"):
         #st.session_state.today_tasks.clear()
 
-    if st.session_state.today_tasks:
-        for task_name in st.session_state.today_tasks:
+    if user_session["today_tasks"]:
+        for task_name in user_session['today_tasks']:
             # Use markdown for a cleaner display
             st.markdown(f"- **{task_name}**")
     else:
@@ -361,12 +344,12 @@ with col2:
 
     # Function to add events to the calendar
     def add_events_to_calendar():
-        for index, task in enumerate(st.session_state.tasks):
+        for index, task in enumerate(user_session['tasks']):
             name = task['name'] 
 
             # Color
-            color_index = st.session_state.courses_list.index(task['course'])
-            color = st.session_state.courses_colors[color_index]
+            color_index = user_session['courses_list'].index(task['course'])
+            color = user_session['courses_colors'][color_index]
 
             due_date = str(task['due_date'])
 
