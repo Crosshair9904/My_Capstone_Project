@@ -15,7 +15,7 @@ def get_user_session(username):
     if username not in st.session_state["user_sessions"]:
         # Initialize user-specific session state
         st.session_state["user_sessions"][username] = {
-        "courses_list": [],
+            "courses_list": [],
             "courses_colors": [],
             "difficulty_ranking": [],
             "tasks": [],
@@ -26,8 +26,8 @@ def get_user_session(username):
 
     return st.session_state["user_sessions"][username]
 
-url = st.secrets['connections']['supabase_url']
-key = st.secrets['connections']['supabase_key']
+url = st.secrets['connections']['SUPABASE_URL']
+key = st.secrets['connections']['SUPABASE_KEY']
 
 
 # supabase = init_connection()

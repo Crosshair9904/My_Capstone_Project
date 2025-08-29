@@ -5,6 +5,9 @@ import uuid
 import time
 from datetime import date, timedelta
 import openai
+from st_supabase_connection import SupabaseConnection
+from supabase import create_client, Client
+import supabase
 
 #Background
 #Background
@@ -54,6 +57,8 @@ def get_user_session(username):
 
 # Get the logged-in user's session state
 user_session = get_user_session(st.session_state["username"])
+st.write(st.session_state["user_sessions"])
+st.write(st.session_state.username)
 
 # Tell The User to Add Courses to The List If Not Done Already
 if not user_session["courses_list"]:
@@ -73,12 +78,48 @@ if "today_tasks" not in user_session:
 if "this_week_tasks" not in user_session:
     user_session["this_week_tasks"] = []
 
+
+def get_user_data(email):
+    """
+    Retrieve user data from the database.
+    
+    :param email: The user's email address.
+    :return: A dictionary containing the user's lists or None if no data is found.
+    """
+    response = supabase.table("user_data").select("*").eq("email", email).execute()
+    if response.data:
+        return response.data[0]["data"]  # Return the 'data' field
+    else:
+        return None
+    
+
+def store_user_data(email, user_data):
+    """
+    Store or update user data in the database.
+    
+    :param email: The user's email address.
+    :param user_data: A dictionary containing the user's lists.
+    """
+    # Check if the user already exists in the database
+    existing_user = supabase.table("user_data").select("*").eq("email", email).execute()
+    
+    if existing_user.data:
+        # Update the existing user's data
+        response = supabase.table("user_data").update({"data": user_data}).eq("email", email).execute()
+    else:
+        # Insert new user data
+        response = supabase.table("user_data").insert({"email": email, "data": user_data}).execute()
+    
+    return response
+
+
+
 today = date.today()
 start = today - timedelta(days=today.weekday())
 end = start + timedelta(days=6)
 
 def update_today_tasks():
-    """Update today's and this week's tasks."""
+    # Update today's and this week's tasks
     global today
     user_session["today_tasks"] = [
         task["name"]
@@ -91,7 +132,11 @@ def update_today_tasks():
         if start < task["due_date"] < end and task["due_date"] != today
     ]
 
+    # Store the User Data in Supabase
+    store_user_data(st.write(st.session_state.username), st.session_state["user_sessions"][username])
+
 def display_tasks():
+    global username
     """Display and edit tasks."""
     global today
     for index, task in enumerate(user_session["tasks"]):

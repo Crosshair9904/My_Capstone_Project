@@ -26,12 +26,15 @@ def get_user_session(username):
 # Get the logged-in user's session state
 user_session = get_user_session(st.session_state["username"])
 
+st.write(st.secrets['connections']['supabase_url'])
+
 # Initialize connection.
 # Uses st.cache_resource to only run once.
 
 def init_connection():
-    url = st.secrets['connections']['supabase']['SUPABASE_URL']
-    key = st.secrets['connections']['supabase']['SUPABASE_KEY']
+    url = st.secrets['connections']['SUPABASE_URL']
+    key = st.secrets['connections']['SUPABASE_KEY']
+
     return create_client(url, key)
 
 supabase = init_connection()
@@ -42,9 +45,9 @@ conn = st.connection("supabase", type=SupabaseConnection)
 # Perform a query to retrieve data from a table
 # Replace "your_table_name" with the actual name of your table
 # You can also specify specific columns instead of "*"
-response = conn.table("AcingTask User Data").select().execute()
+response = conn.table("user_data").select().execute()
 
-if response and response.data:
+if response:
     st.write("## Contents of your_table_name:")
     for row in response.data:
         st.write(row)
