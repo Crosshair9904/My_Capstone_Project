@@ -231,7 +231,6 @@ col1, col2, col3 = st.columns([2.5, 3, 1])
 
 with col2:
     st.markdown("# Home")
-    st.write(st.session_state.user_email)
 
 
 col1, col2, col3= st.columns([1, 1.75, 1])

@@ -72,8 +72,8 @@ def main_app(user_email):
     login(user_email) # used to start the session state individually for each user's email
 
     with st.sidebar:
-        st.title("🎉 Welcome Page")
-        st.success(f"Welcome, {user_email}! 👋")
+        st.title("Login Sucessful!")
+        st.success(f"Welcome, {user_email}!")
         if st.button("Logout"):
             sign_out()
     
