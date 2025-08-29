@@ -3,4 +3,5 @@ openai
 streamlit_calendar
 streamlit_authenticator
 datetime
-st-supabase-connection 
+st-supabase-connection
+gotrue
