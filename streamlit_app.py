@@ -2,22 +2,10 @@ import streamlit as st
 import streamlit_authenticator as stauth  
 from datetime import datetime, timedelta
 from st_supabase_connection import SupabaseConnection
+from supabase import create_client, Client
 
 
 #TO RUN APP: RUN THE CODE AND TAKE THE PATH AND USE THE RUN COMMAND IN TERMINAL
-
-# Access user data from secrets
-USER_DATA = st.secrets["users"]
-
-# Set session timeout duration 
-SESSION_TIMEOUT = timedelta(minutes=30)
-
-def authenticate(username, password):
-    # Authenticate user by checking their credentials
-    if username in USER_DATA and USER_DATA[username] == password:
-        return True
-    return False
-
 
 def get_user_session(username):
     # Get / initialize session state for a specific user
@@ -38,58 +26,57 @@ def get_user_session(username):
 
     return st.session_state["user_sessions"][username]
 
+url = st.secrets['connections']['supabase_url']
+key = st.secrets['connections']['supabase_key']
+
+
+# supabase = init_connection()
+
+# # Initialize the Supabase connection
+# conn = st.connection("supabase", type=SupabaseConnection)
+supabase: Client = create_client(url, key)
+
+def sign_up(email, password):
+    try:
+        user = supabase.auth.sign_up({"email": email, "password": password})
+        return user
+    except Exception as e:
+        st.error(f"Registration failed: {e}")
+
+def sign_in(email, password):
+    try:
+        user = supabase.auth.sign_in_with_password({"email": email, "password": password})
+        return user
+    except Exception as e:
+        st.error(f"Login failed: {e}")
+
+def sign_out():
+    try:
+        supabase.auth.sign_out()
+        st.session_state.user_email = None
+        st.rerun()
+    except Exception as e:
+        st.error(f"Logout failed: {e}")
+
 
 def login(username):
     # Log in the user and set session state
     st.session_state["logged_in"] = True
-    st.session_state["username"] = username
+    st.session_state["username"] = st.session_state.user_email
     st.session_state["login_time"] = datetime.now()  # Set login time
     # Initialize user-specific session state
     get_user_session(username)
 
-def logout():
-    # Log out the user
-    st.session_state["logged_in"] = False
-    st.session_state["username"] = None
-    st.session_state["login_time"] = None
+def main_app(user_email):
 
-def check_session_timeout():
-    # Log out the user if the session has expired 
-    login_time = st.session_state.get("login_time", None)  # Get login time or None
-    if login_time is None:
-        return  # Skip timeout check if login_time is not set
+    login(user_email) # used to start the session state individually for each user's email
 
-    if datetime.now() - login_time > SESSION_TIMEOUT:
-        st.warning("Session expired. Please log in again.")
-        logout()
-        st.rerun()
-
-def login_page():
-    # Display the login page
-    st.title("Login")
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    login_button = st.button("Login")
-
-    if login_button:
-        if authenticate(username, password):
-            login(username)
-            st.success(f"Welcome, {username}!")
-            st.rerun()
-        else:
-            st.error("Invalid username or password.")
-
-def user_dashboard():
-    # Display the user's dashboard 
-    
     with st.sidebar:
-        st.title(f"Welcome, {st.session_state['username']}!")
-        st.write("This is your personalized dashboard.")
+        st.title("🎉 Welcome Page")
+        st.success(f"Welcome, {user_email}! 👋")
         if st.button("Logout"):
-            logout()
-            st.rerun()
-
-
+            sign_out()
+    
     #all the pages setup
     #logout_page = st.Page(logout, title="Log out", icon=":material/logout:")
     settings = st.Page("services/settings.py", title="Settings", icon=":material/settings:")
@@ -115,26 +102,30 @@ def user_dashboard():
 
     pg.run()
 
-def main():
-    # Initialize session state variables
-    if "logged_in" not in st.session_state:
-        st.session_state["logged_in"] = False
-        st.session_state["username"] = None
-        st.session_state["login_time"] = None
+def auth_screen():
+    st.title("Please Login or Sign Up If This Is The First Time")
+    option = st.selectbox("Choose an action:", ["Login", "Sign Up"])
+    email = st.text_input("Email")
+    password = st.text_input("Password", type="password")
 
-    # Check session timeout
-    if st.session_state["logged_in"]:
-        check_session_timeout()
+    if option == "Sign Up" and st.button("Register"):
+        user = sign_up(email, password)
+        if user and user.user:
+            st.success("Registration successful. Please log in.")
 
-    # Display login page or user dashboard
-    if st.session_state["logged_in"]:
-        user_dashboard()
-    else:
-        login_page()
+    if option == "Login" and st.button("Login"):
+        user = sign_in(email, password)
+        if user and user.user:
+            st.session_state.user_email = user.user.email
+            st.success(f"Welcome back, {email}!")
+            st.rerun()
 
-if __name__ == "__main__": 
-    main()
+if "user_email" not in st.session_state:
+    st.session_state.user_email = None
 
-
+if st.session_state.user_email:
+    main_app(st.session_state.user_email)
+else:
+    auth_screen()
 
 

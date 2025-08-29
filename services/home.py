@@ -30,6 +30,9 @@ def background():
     st.markdown(page_element, unsafe_allow_html=True)
 background()
 
+
+
+
 def get_user_session(username):
     """Get or initialize session state for a specific user."""
     if "user_sessions" not in st.session_state:
@@ -228,6 +231,7 @@ col1, col2, col3 = st.columns([2.5, 3, 1])
 
 with col2:
     st.markdown("# Home")
+    st.write(st.session_state.user_email)
 
 
 col1, col2, col3= st.columns([1, 1.75, 1])
