@@ -34,6 +34,10 @@ def background():
 background()
 
 
+# Initialize Supabase Client
+url = st.secrets['connections']['SUPABASE_URL']
+key = st.secrets['connections']['SUPABASE_KEY']
+supabase: Client = create_client(url, key)
 
 
 def get_user_session(username):
@@ -57,8 +61,7 @@ def get_user_session(username):
 
 # Get the logged-in user's session state
 user_session = get_user_session(st.session_state["username"])
-st.write(st.session_state["user_sessions"])
-st.write(st.session_state.username)
+
 
 # Tell The User to Add Courses to The List If Not Done Already
 if not user_session["courses_list"]:
@@ -293,7 +296,7 @@ with col2:
                 new_task = {
                     "name": st.text_input("Task Name:"),
                     "course": st.selectbox("Course:", user_session["courses_list"]),
-                    "due_date": st.date_input("Due Date:")
+                    #"due_date": st.date_input("Due Date:")
                 }
             
             # Additional Details
@@ -306,7 +309,8 @@ with col2:
             # Submit
             with tab3:
                 if st.form_submit_button("Submit"):
-                    user_session["tasks"].append(new_task)
+                    #user_session["tasks"].append(new_task)
+                    supabase.table('user_data').insert({'data': new_task}).execute()
                     update_today_tasks()
                     st.success("Task added!")
 

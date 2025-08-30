@@ -80,7 +80,7 @@ def main_app(user_email):
     #all the pages setup
     #logout_page = st.Page(logout, title="Log out", icon=":material/logout:")
     settings = st.Page("services/settings.py", title="Settings", icon=":material/settings:")
-    calendar = st.Page("services/calendar.py", title="Calendar", icon=":material/settings:")
+    calendar = st.Page("services/calendar.py", title="Supabase Testing", icon=":material/warning:")
 
     home = st.Page(
     "services/home.py",
@@ -103,8 +103,11 @@ def main_app(user_email):
     pg.run()
 
 def auth_screen():
-    st.title("Please Login or Sign Up If This Is The First Time")
-    option = st.selectbox("Choose an action:", ["Login", "Sign Up"])
+    st.title("Please Login or Sign Up")
+    st.error("Please note that only your email will be used exclusively to keep your app usage only accessable by you, protected by your password")
+    options = ["Login", "Sign Up"]
+    option = st.segmented_control(
+    "", options, selection_mode="single", width="stretch", default="Login")
     email = st.text_input("Email")
     password = st.text_input("Password", type="password")
 

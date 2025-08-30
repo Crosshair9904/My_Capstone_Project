@@ -3,59 +3,45 @@ import streamlit_authenticator as stauth
 from datetime import datetime, timedelta
 from st_supabase_connection import SupabaseConnection
 from supabase import create_client, Client
-
-def get_user_session(username):
-    """Get or initialize session state for a specific user."""
-    if "user_sessions" not in st.session_state:
-        st.session_state["user_sessions"] = {}
-
-    if username not in st.session_state["user_sessions"]:
-        # Initialize user-specific session state
-        st.session_state["user_sessions"][username] = {
-            "courses_list": [],
-            "courses_colors": [],
-            "difficulty_ranking": [],
-            "tasks": [],
-            "complete_tasks": [],
-            "today_tasks": [],
-            "this_week_tasks": [],
-        }
-
-    return st.session_state["user_sessions"][username]
-
-# Get the logged-in user's session state
-user_session = get_user_session(st.session_state["username"])
-
-st.write(st.secrets['connections']['supabase_url'])
-
-# Initialize connection.
-# Uses st.cache_resource to only run once.
-
-def init_connection():
-    url = st.secrets['connections']['SUPABASE_URL']
-    key = st.secrets['connections']['SUPABASE_KEY']
-
-    return create_client(url, key)
-
-supabase = init_connection()
-
-# Initialize the Supabase connection
-conn = st.connection("supabase", type=SupabaseConnection)
-
-# Perform a query to retrieve data from a table
-# Replace "your_table_name" with the actual name of your table
-# You can also specify specific columns instead of "*"
-response = conn.table("user_data").select().execute()
-
-if response:
-    st.write("## Contents of your_table_name:")
-    for row in response.data:
-        st.write(row)
+import supabase
 
 
 
 
+# Initialize Supabase Client
+url = st.secrets['connections']['SUPABASE_URL']
+key = st.secrets['connections']['SUPABASE_KEY']
+supabase: Client = create_client(url, key)
 
-#
+
+def get_todos():
+    response = supabase.table('todos').select('*').execute()
+    return response.data
 
 
+def add_todo(task):
+    supabase.table('todos').insert({'task': task}).execute()
+
+
+# def clear_todo():
+#     supabase.table('todos').delete().eq("id", 0, 1).execute()
+
+st.title("Supabase Todo App")
+
+task = st.text_input("Add a new task:")
+if st.button("Add Task"):
+    if task:
+        add_todo(task)
+        st.success("Task added!")
+    else:
+        st.error("Please enter a task.")
+# if st.button("Clear Tasks"):
+#     clear_todo()
+
+st.write("### Todo List:")
+todos = get_todos()
+if todos:
+    for todo in todos:
+        st.write(f"- {todo['task']}")
+else:
+    st.write("No tasks available.")
