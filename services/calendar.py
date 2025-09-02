@@ -6,7 +6,27 @@ from supabase import create_client, Client
 import supabase
 
 
+def get_user_session(username):
+    """Get or initialize session state for a specific user."""
+    if "user_sessions" not in st.session_state:
+        st.session_state["user_sessions"] = {}
 
+    if username not in st.session_state["user_sessions"]:
+        # Initialize user-specific session state
+        st.session_state["user_sessions"][username] = {
+            "courses_list": [],
+            "courses_colors": [],
+            "difficulty_ranking": [],
+            "tasks": [],
+            "complete_tasks": [],
+            "today_tasks": [],
+            "this_week_tasks": [],
+        }
+
+    return st.session_state["user_sessions"][username]
+
+# Get the logged-in user's session state
+user_session = get_user_session(st.session_state["username"])
 
 # Initialize Supabase Client
 url = st.secrets['connections']['SUPABASE_URL']
@@ -14,34 +34,77 @@ key = st.secrets['connections']['SUPABASE_KEY']
 supabase: Client = create_client(url, key)
 
 
-def get_todos():
-    response = supabase.table('todos').select('*').execute()
-    return response.data
 
-
-def add_todo(task):
-    supabase.table('todos').insert({'task': task}).execute()
-
-
-# def clear_todo():
-#     supabase.table('todos').delete().eq("id", 0, 1).execute()
 
 st.title("Supabase Todo App")
 
-task = st.text_input("Add a new task:")
-if st.button("Add Task"):
-    if task:
-        add_todo(task)
-        st.success("Task added!")
-    else:
-        st.error("Please enter a task.")
+if st.button("Check User"):
+    response = supabase.table("user_data").insert({
+        "email": st.session_state["username"],
+        "data": {"tasks": st.session_state["user_sessions"][st.session_state["username"]]}
+    }).execute()
+
+# MAKE AN IF SO THAT IF A USER IS ALREADY THERE, SAY SO OR DO NOTHING
+
+# TO USE IN CODE:
+    # HAVE IT SO THAT IN THE UPDATE_TODAYS_TASKS FUNCTION, CREATE A TABLE FOR THE USER, THEN EVERYTIME THE TASKS LIST IS UPDATED, CLEAR THE ROW AND RE-ADD IT WITH THE NEW STUFF!!
+
+
+response = supabase.table("user_data").select("*").eq("email", st.session_state["username"]).execute()
+if response.data:
+    st.write(f"User found:", response.data)
+else:
+    st.write("No user found with that email.")
+
+
+# # Add a new task
+# def add_todo(task_name, username):
+#     """Add a new task to the database."""
+#     response = supabase.table("todos").insert({"task": task_name}).execute()
+#     user_add = supabase.table("todos").insert({"email": username}).execute()
+
+# # Fetch all tasks
+# def get_todos():
+#     """Fetch all tasks from the database."""
+#     response = supabase.table("todos").select("task").execute()
+#     user_add = supabase.table("todos").select("email").execute()
+#     return response.data and user_add.data
+    
+
+# # Delete a specific task
+# def delete_todo(task_name, username):
+#     """Delete a specific task from the database."""
+#     response = supabase.table("todos").delete().eq("task", task_name).execute()
+#     user_add = supabase.table("todos").delete().eq("email", username).execute()
+
+
+# # Clear all tasks
+# def clear_todo():
+#     """Clear all tasks from the database."""
+#     response = supabase.table("todos").delete().execute()
+
+# # Streamlit app
+# task = st.text_input("Add a new task:")
+# if st.button("Add Task"):
+#     if task:
+#         add_todo(task, st.session_state["username"])
+#         st.success("Task added!")
+#     else:
+#         st.error("Please enter a task.")
+
+# # Button to clear all tasks
 # if st.button("Clear Tasks"):
 #     clear_todo()
 
-st.write("### Todo List:")
-todos = get_todos()
-if todos:
-    for todo in todos:
-        st.write(f"- {todo['task']}")
-else:
-    st.write("No tasks available.")
+# st.write("### Todo List:")
+# todos = get_todos()
+# if todos:
+#     for todo in todos:
+#         col1, col2 = st.columns([3, 1])
+#         with col1:
+#             st.write(f"- {todo['task']}")
+#         with col2:
+#             if st.button(f"Delete", key=f"delete_{todo['task']}"):
+#                 delete_todo(todo['task'])
+# else:
+#     st.write("No tasks available.")
