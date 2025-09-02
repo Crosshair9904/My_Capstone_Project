@@ -33,13 +33,13 @@ def get_user_session(username):
     if username not in st.session_state["user_sessions"]:
         # Initialize user-specific session state
         st.session_state["user_sessions"][username] = {
-        "courses_list": [],
+            "courses_list": [],
             "courses_colors": [],
             "difficulty_ranking": [],
             "tasks": [],
             "complete_tasks": [],
-            "today_tasks": [],
-            "this_week_tasks": [],
+            # "today_tasks": [],
+            # "this_week_tasks": [],
         }
 
     return st.session_state["user_sessions"][username]

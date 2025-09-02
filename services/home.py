@@ -53,8 +53,8 @@ def get_user_session(username):
             "difficulty_ranking": [],
             "tasks": [],
             "complete_tasks": [],
-            "today_tasks": [],
-            "this_week_tasks": [],
+            # "today_tasks": [],
+            # "this_week_tasks": [],
         }
 
     return st.session_state["user_sessions"][username]
@@ -82,61 +82,29 @@ if "this_week_tasks" not in user_session:
     user_session["this_week_tasks"] = []
 
 
-def get_user_data(email):
-    """
-    Retrieve user data from the database.
-    
-    :param email: The user's email address.
-    :return: A dictionary containing the user's lists or None if no data is found.
-    """
-    response = supabase.table("user_data").select("*").eq("email", email).execute()
-    if response.data:
-        return response.data[0]["data"]  # Return the 'data' field
-    else:
-        return None
-    
-
-def store_user_data(email, user_data):
-    """
-    Store or update user data in the database.
-    
-    :param email: The user's email address.
-    :param user_data: A dictionary containing the user's lists.
-    """
-    # Check if the user already exists in the database
-    existing_user = supabase.table("user_data").select("*").eq("email", email).execute()
-    
-    if existing_user.data:
-        # Update the existing user's data
-        response = supabase.table("user_data").update({"data": user_data}).eq("email", email).execute()
-    else:
-        # Insert new user data
-        response = supabase.table("user_data").insert({"email": email, "data": user_data}).execute()
-    
-    return response
-
 
 
 today = date.today()
+better_today = today.strftime("%Y-%m-%d")
 start = today - timedelta(days=today.weekday())
+better_start = start.strftime("%Y-%m-%d")
 end = start + timedelta(days=6)
+better_end = end.strftime("%Y-%m-%d")
 
 def update_today_tasks():
     # Update today's and this week's tasks
-    global today
     user_session["today_tasks"] = [
         task["name"]
         for task in user_session["tasks"]
-        if task["due_date"] == today
+        if task["due_date"] == better_today
     ]
     user_session["this_week_tasks"] = [
         task["name"]
         for task in user_session["tasks"]
-        if start < task["due_date"] < end and task["due_date"] != today
+        if better_start < task["due_date"] < better_end and task["due_date"] != better_today
     ]
 
     # Store the User Data in Supabase
-    store_user_data(st.write(st.session_state.username), st.session_state["user_sessions"][username])
 
 def display_tasks():
     global username
@@ -176,7 +144,7 @@ def display_tasks():
                         index=user_session["courses_list"].index(task["course"]),
                         key=f"course_{index}",
                     )
-                    task["due_date"] = st.date_input("Due Date", value=task["due_date"], key=f"date_{index}")
+                    task["due_date"] = st.date_input("Due Date", value=task["due_date"], key=f"date_{index}").isoformat()
                 with col2:
                     task["status"] = st.select_slider(
                         "Status",
@@ -246,7 +214,7 @@ def display_completed_tasks():
                     index=user_session["courses_list"].index(task["course"]),
                     key=f"completed_course_{index}",
                 )
-                task["due_date"] = st.date_input("Date Completed", value=task["due_date"], key=f"completed_date_{index}")
+                task["due_date"] = st.date_input("Date Completed", value=task["due_date"], key=f"completed_date_{index}").isoformat()
             with col2:
                 task["status"] = st.select_slider(
                     "Status",
@@ -296,7 +264,7 @@ with col2:
                 new_task = {
                     "name": st.text_input("Task Name:"),
                     "course": st.selectbox("Course:", user_session["courses_list"]),
-                    #"due_date": st.date_input("Due Date:")
+                    "due_date": st.date_input("Due Date:").isoformat()
                 }
             
             # Additional Details
@@ -309,8 +277,7 @@ with col2:
             # Submit
             with tab3:
                 if st.form_submit_button("Submit"):
-                    #user_session["tasks"].append(new_task)
-                    supabase.table('user_data').insert({'data': new_task}).execute()
+                    user_session["tasks"].append(new_task)
                     update_today_tasks()
                     st.success("Task added!")
 
