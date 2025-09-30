@@ -9,6 +9,9 @@ import google.generativeai as genai
 import os
 
 
+from services.home import get_user_data
+
+
 #Background
 def background():
     page_element="""
@@ -33,32 +36,75 @@ def background():
 background()
 
 st.header("AI Tools")
+import openai
+from openai import OpenAI
 
-st.title("ChatGPT-like clone")
+# Connect to OpenAI API
+client = OpenAI(
+    api_key=st.secrets["API_KEY"],
+    base_url="https://api.aimlapi.com/"
+)
 
- # Load API key from Streamlit secrets or environment variable for security
-if "GEMENI_API_KEY" in st.secrets:
-    genai.configure(api_key=st.secrets["GEMENI_API_KEY"])
-else:
-    st.error("Gemini API Key not found. Please add it to your Streamlit secrets or environment variables.")
-    st.stop() # Stop the app if the key is missing
+# Create an assistant
+my_assistant = client.beta.assistants.create(
+    instructions="You are a helpful assistant.",
+    name="AI Assistant",
+    model="gpt-4o",  # Specify the model
+)
 
-model = genai.GenerativeModel('gemini-pro')
+assistant_id = my_assistant.id  # Store assistant ID
+thread = client.beta.threads.create()  # Create a new thread
+thread_id = thread.id  # Store the thread ID
 
-if "messages" not in st.session_state:
-    st.session_state.messages = [{"role": "model", "content": "Hello! How can I help you today?"}]
+def initial_request():
+    client.beta.threads.messages.create(
+        thread_id=thread.id,
+        role="user",
+        content="Hi! Let's chat!",
+    )
 
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
 
-if prompt := st.chat_input("Ask me anything..."):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
+def send_message(user_message):
+    """Send a message to the assistant and receive a full response"""
+    if not user_message.strip():
+        print("⚠️ Message cannot be empty!")
+        return
 
-with st.chat_message("model"):
-    response = model.generate_content(prompt)
-    st.markdown(response.text)
-    st.session_state.messages.append({"role": "model", "content": response.text})
+    # Add the user's message to the thread
+    client.beta.threads.messages.create(
+        thread_id=thread_id,
+        role="user",
+        content=user_message
+    )
 
+    # Start a new run and wait for completion
+    run = client.beta.threads.runs.create_and_poll(
+        thread_id=thread_id,
+        assistant_id=assistant_id,
+        instructions="Keep responses concise and clear."
+    )
+
+    # Check if the run was successful
+    if run.status == "completed":
+        # Retrieve messages from the thread
+        messages = client.beta.threads.messages.list(thread_id=thread_id)
+        
+        # Find the last assistant message
+        for message in reversed(messages.data):
+            if message.role == "assistant":
+                print()  # Add an empty line for spacing
+                print(f"assistant > {message.content[0].text.value}")
+                return
+
+    print("⚠️ Error: Failed to get a response from the assistant.")
+
+
+# Main chat loop
+initial_request()
+print("🤖 AI Assistant is ready! Type 'exit' to quit.")
+while True:
+    user_input = input("\nYou > ")
+    if user_input.lower() in ["exit", "quit"]:
+        print("👋 Chat session ended. See you next time!")
+        break
+    send_message(user_input)

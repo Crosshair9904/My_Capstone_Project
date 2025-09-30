@@ -3,6 +3,7 @@ import streamlit_authenticator as stauth
 from datetime import datetime, timedelta
 from st_supabase_connection import SupabaseConnection
 from supabase import create_client, Client
+from anthropic import Anthropic
 
 
 #TO RUN APP: RUN THE CODE AND TAKE THE PATH AND USE THE RUN COMMAND IN TERMINAL
@@ -86,6 +87,7 @@ def main_app(user_email):
     "services/home.py",
     title="Home",
     icon=":material/home:",
+    default=True,
     )
     ai = st.Page("services/ai.py", title="Ai Tools", icon=":material/network_intelligence:")
 
@@ -101,9 +103,9 @@ def main_app(user_email):
         pg = st.navigation({"Account": account_pages} | page_dict)
 
     pg.run()
-
-def auth_screen():
-    st.title("Please Login or Sign Up")
+    
+@st.dialog("Please Login or Sign Up")
+def auth_screen():    
     st.error("Please note that only your email will be used exclusively to keep your app usage only accessable by you, protected by your password")
     options = ["Login", "Sign Up"]
     option = st.segmented_control(
