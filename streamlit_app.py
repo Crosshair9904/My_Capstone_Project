@@ -3,7 +3,7 @@ import streamlit_authenticator as stauth
 from datetime import datetime, timedelta
 from st_supabase_connection import SupabaseConnection
 from supabase import create_client, Client
-from anthropic import Anthropic
+
 
 
 #TO RUN APP: RUN THE CODE AND TAKE THE PATH AND USE THE RUN COMMAND IN TERMINAL
