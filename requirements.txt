@@ -5,6 +5,5 @@ streamlit_authenticator
 datetime
 st-supabase-connection
 gotrue
-docx
+python-docx
 supabase
-Document
