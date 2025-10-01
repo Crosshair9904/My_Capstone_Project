@@ -298,12 +298,12 @@ def home_page(email):
     # Menu Layout
     col1, col2, col3 = st.columns([2.3, 1, 2.3])
 
-    with col1:
+    with col2:
         st.markdown("# Home")
 
     col1, col2 = st.columns([1,4])
 
-    with col1:
+    with col2:
         st.empty()
         st.empty()
         st.empty()
@@ -345,15 +345,15 @@ def home_page(email):
                             else:
                                 st.error("Please enter a task.")
             add_new_task()
-    with col2:
-        st.empty()
-        # Display the list of tasks for editing
-        st.subheader("Current Tasks")
-        if user_data['tasks']:
-            
-            display_tasks()
-        else:
-            st.write("No Tasks Available.")
+    
+    
+    # Display the list of tasks for editing
+    st.subheader("Current Tasks")
+    if user_data['tasks']:
+        
+        display_tasks()
+    else:
+        st.write("No Tasks Available.")
 
 
 
