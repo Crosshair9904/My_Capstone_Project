@@ -5,3 +5,7 @@ streamlit_authenticator
 datetime
 st-supabase-connection
 gotrue
+docx
+io
+supabase
+json
