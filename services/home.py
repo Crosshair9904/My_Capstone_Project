@@ -301,7 +301,6 @@ def home_page(email):
     with col2:
         st.markdown("# Home")
 
-    col1, col2 = st.columns([1,4])
 
     with col2:
         st.empty()
