@@ -380,7 +380,14 @@ def home_page(email):
         else:
             st.write("No Tasks Due This Week")
 
+        # Area for Complete Tasks
+        st.subheader("Completed Tasks")
+        if user_data['complete_tasks']:
+            
+            display_completed_tasks()
 
+        else:
+            st.write("You Have Not Completed Any Tasks.")
 
     # The calendar
     with col2:
@@ -465,14 +472,6 @@ def home_page(email):
         except Exception as e:
             print(f"DNS resolution failed: {e}")
 
-    # Area for Complete Tasks
-    st.subheader("Completed Tasks")
-    if user_data['complete_tasks']:
-        
-        display_completed_tasks()
-
-    else:
-        st.write("You Have Not Completed Any Tasks.")
 
 
 
