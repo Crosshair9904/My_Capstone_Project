@@ -36,75 +36,25 @@ def background():
 background()
 
 st.header("AI Tools")
-import openai
-from openai import OpenAI
-
-# Connect to OpenAI API
-client = OpenAI(
-    api_key=st.secrets["API_KEY"],
-    base_url="https://api.aimlapi.com/"
-)
-
-# Create an assistant
-my_assistant = client.beta.assistants.create(
-    instructions="You are a helpful assistant.",
-    name="AI Assistant",
-    model="gpt-4o",  # Specify the model
-)
-
-assistant_id = my_assistant.id  # Store assistant ID
-thread = client.beta.threads.create()  # Create a new thread
-thread_id = thread.id  # Store the thread ID
-
-def initial_request():
-    client.beta.threads.messages.create(
-        thread_id=thread.id,
-        role="user",
-        content="Hi! Let's chat!",
-    )
 
 
-def send_message(user_message):
-    """Send a message to the assistant and receive a full response"""
-    if not user_message.strip():
-        print("⚠️ Message cannot be empty!")
-        return
 
-    # Add the user's message to the thread
-    client.beta.threads.messages.create(
-        thread_id=thread_id,
-        role="user",
-        content=user_message
-    )
+import google.generativeai as genai
 
-    # Start a new run and wait for completion
-    run = client.beta.threads.runs.create_and_poll(
-        thread_id=thread_id,
-        assistant_id=assistant_id,
-        instructions="Keep responses concise and clear."
-    )
+# Configure the Gemini API with the securely stored key
+genai.configure(api_key=st.secrets["GEMENI_API_KEY"])
 
-    # Check if the run was successful
-    if run.status == "completed":
-        # Retrieve messages from the thread
-        messages = client.beta.threads.messages.list(thread_id=thread_id)
-        
-        # Find the last assistant message
-        for message in reversed(messages.data):
-            if message.role == "assistant":
-                print()  # Add an empty line for spacing
-                print(f"assistant > {message.content[0].text.value}")
-                return
+# Initialize the Gemini model
+model = genai.GenerativeModel("gemini-2.5-flash") 
 
-    print("⚠️ Error: Failed to get a response from the assistant.")
+st.title("Gemini-Powered AI App")
 
+user_input = st.text_input("Enter your prompt:")
 
-# Main chat loop
-initial_request()
-print("🤖 AI Assistant is ready! Type 'exit' to quit.")
-while True:
-    user_input = input("\nYou > ")
-    if user_input.lower() in ["exit", "quit"]:
-        print("👋 Chat session ended. See you next time!")
-        break
-    send_message(user_input)
+if st.button("Get Response"):
+    if user_input:
+        with st.spinner("Generating response..."):
+            response = model.generate_content(user_input)
+            st.write(response.text)
+    else:
+        st.warning("Please enter a prompt.")
