@@ -154,7 +154,7 @@ def home_page(email):
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
         model = genai.GenerativeModel(
             model_name="gemini-2.5-flash",
-            generation_config=genai.GenerationConfig(temperature=0.05)
+            generation_config=genai.GenerationConfig(temperature=0.0)
         )
 
         prompt = f"""
