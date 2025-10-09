@@ -7,3 +7,4 @@ st-supabase-connection
 gotrue
 python-docx
 supabase
+google.generativeai
