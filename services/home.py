@@ -5,12 +5,16 @@ import uuid
 import time
 from datetime import date, timedelta, datetime
 import openai
+import google.generativeai as genai 
 from st_supabase_connection import SupabaseConnection
 from supabase import create_client, Client
 import supabase
 import json
 from docx import Document
 import io
+import os
+import base64
+from pathlib import Path
 
 
 # Initialize Supabase Client
@@ -55,8 +59,9 @@ def get_user_data(email):
             "difficulty_ranking": [],
             "tasks": [],
             "complete_tasks": [],
-            "written_notes":[],
+            "written_notes":[ ],
             "uploaded_file":[],
+            "ai_history":[],
 
         }
 
@@ -75,22 +80,16 @@ def get_user_data(email):
     return raw_data
 
 
-# Function to Update Supabase Database 
 
-def update_user_data(email, new_data):
-    """Update user's data field in Supabase."""
-    supabase.table("user_data").update({
-        "data": new_data
-    }).eq("email", email).execute()
-
-
-
-# Initialize list session state
+# Initialize sectioned task list session state
 if "today_tasks" not in st.session_state:
     st.session_state["today_tasks"] = []
 
 if "this_week_tasks" not in st.session_state:
     st.session_state["this_week_tasks"] = []
+
+if "ai_to_do_list_database" not in st.session_state:
+    st.session_state["ai_to_do_list_database"] = []
 
 def get_week_bounds():
     """Return today's date, start of week, and end of week (all as date objects)."""
@@ -118,6 +117,15 @@ this_weeks_tasks = [
 ]
 
 
+# Function to Update Supabase Database 
+
+def update_user_data(email, new_data):
+    """Update user's data field in Supabase."""
+    supabase.table("user_data").update({
+        "data": new_data
+    }).eq("email", email).execute()
+
+
 def home_page(email):
 
 
@@ -130,8 +138,64 @@ def home_page(email):
     difficulty_ranking = user_data.get("difficulty_ranking", [])
     tasks = user_data.get("tasks", [])
     completed_tasks = user_data.get("complete_tasks", [])
-    written_notes = user_data.get("written_notes",[])
-    uploaded_file = user_data.get("uploaded_file",[])
+    written_notes = user_data.get("written_notes", [])
+    uploaded_file = user_data.get("uploaded_file", [])
+    the_ai_history = user_data.get("ai_history", [])
+
+    def ai_to_do_list():
+        # Set default session variables
+        if "ai_data_stale" not in st.session_state:
+            st.session_state["ai_data_stale"] = True
+
+        if "ai_to_do_list_database" not in st.session_state:
+            st.session_state["ai_to_do_list_database"] = []
+
+        # Configure the Gemini API
+        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+        model = genai.GenerativeModel(
+            model_name="gemini-2.5-flash",
+            generation_config=genai.GenerationConfig(temperature=0.15)
+        )
+
+        prompt = f"""
+        Your task is to output a list of which of the users tasks in the logical order that they should be done.
+
+        Take the courses list and course difficulty as well as the tasks and their details in the database and create a list of which order to do the tasks in that is personalized to each users details.
+        Take the names into consideration as well to determine the gravity of the task when determining the order.
+
+        INPUTS
+        difficulty: {difficulty_ranking}
+        courses: {courses}
+        tasks: {tasks}
+
+        Formating requirements:
+        Make it into a list that can be displayed in streamlit application
+        YOU ARE ONLY OUTPUTING A LIST OF THE USER'S TASKS IN THE ORDER OF WHICH THEY SHOULD BE DONE BASED ON THE INPUTS
+        DO NOT OUTPUT CODE OF ANY KIND, JUST THE LIST OF THE NAMES OF THE TASKS!!!!
+        Do Not add extra unecessary characters like brackets in response, but ensure it remains a list, make it as easy as possible to incorporate response into a list
+
+        What You Need To Output:
+        - OUTPUT A POINT LIST THAT LISTS THE ORDER OF THE TASKS
+        - Put them in a "To Do Today" category "To Do Afterwards" category and add a bit of space in between the two categories for easy legibility
+        - If no other tasks after "To Do Today" category, do NOT include the "To Do Afterwards" category
+        """
+
+        # If data was updated and AI list is stale, regenerate
+        if st.session_state["ai_data_stale"]:
+            with st.spinner("Generating Optimal Task Completion Order ..."):
+                response = model.generate_content(prompt)
+                ai_output = response.text
+                st.session_state["ai_to_do_list_database"] = [ai_output]
+                st.session_state["ai_data_stale"] = False  # Mark as up-to-date
+                st.success("AI To-Do List Updated!")
+        
+        # Show current AI-generated list
+        if st.session_state["ai_to_do_list_database"]:
+            st.markdown(st.session_state["ai_to_do_list_database"][0])
+
+        # Manual update option
+        if st.button("Regenerate AI Task Order"):
+            st.session_state["ai_data_stale"] = True
 
     if not courses:
         st.warning("Please Enter Your Courses In The Setting Menu Before Continuing")
@@ -166,6 +230,7 @@ def home_page(email):
             with col2:
                 with st.expander(task["name"], expanded=False):
                     col1, col2, col3 = st.columns(3)
+
                     with col1:
                         task["name"] = st.text_input("Name", value=task["name"], key=f"name_{index}")
                         task["course"] = st.selectbox(
@@ -175,6 +240,7 @@ def home_page(email):
                             key=f"course_{index}",
                         )
                         task["due_date"] = st.date_input("Due Date", value=task["due_date"], key=f"date_{index}").isoformat()
+
                     with col2:
                         task["status"] = st.select_slider(
                             "Status",
@@ -190,64 +256,105 @@ def home_page(email):
                         )
                         task["effort"] = st.slider("Effort", min_value=1, max_value=5, value=task["effort"], key=f"effort_{index}")
 
-                    
-                    
-                    # Notes Section
+                    # ✅ Notes Section
                     st.title("Notes")
-                    written_notes = st.text_area("Jot Down Some Notes Here:", key=f"notes_{index}")
+                    # Initialize notes if missing
+                    if "written_notes" not in task:
+                        task["written_notes"] = ""
 
-                    # File Upload
+                    task['written_notes'] = st.text_area(
+                        "Jot Down Some Notes Here:", 
+                        value=task["written_notes"], 
+                        key=f"notes_{index}"
+                    )
+
+                    # ✅ File Upload
                     with st.expander("Upload Notes"):
                         uploaded_file = st.file_uploader("Upload a .docx file", type=["docx"], key=f"uploaded_notes_{index}")
 
-                    if uploaded_file is not None:
-                        @st.dialog("Uploaded_File")
-                        def view_uploaded_files():
-                            # Read the uploaded file as bytes
-                            docx_bytes = uploaded_file.getvalue()
+                                            
+                        UPLOAD_DIR = Path("uploaded_docs")
+                        UPLOAD_DIR.mkdir(exist_ok=True)
 
-                            # Create a BytesIO object to pass to python-docx
-                            doc_stream = io.BytesIO(docx_bytes)
+                        if uploaded_file is not None:
+                            # Generate unique file name
+                            file_extension = uploaded_file.name.split('.')[-1]
+                            safe_task_name = task["name"].replace(" ", "_").lower()
+                            file_name = f"{safe_task_name}_{index}.{file_extension}"
+                            file_path = UPLOAD_DIR / file_name
 
-                            # Load the document using python-docx
-                            document = Document(doc_stream)
+                            # Save file to disk
+                            with open(file_path, "wb") as f:
+                                f.write(uploaded_file.getbuffer())
 
-                            st.subheader("Document Content:")
+                            # ✅ Save file metadata or path to task
+                            task["uploaded_file_path"] = str(file_path)
+                            task["uploaded_file_name"] = uploaded_file.name
 
-                            # Go through paragraphs and display their text
-                            for paragraph in document.paragraphs:
-                                st.write(paragraph.text)
+                            # Show dialog with file content (optional)
+                            @st.dialog("Uploaded File")
+                            def view_uploaded_files():
+                                docx_bytes = uploaded_file.getvalue()
+                                doc_stream = io.BytesIO(docx_bytes)
+                                document = Document(doc_stream)
 
-                            # Display tables if present
-                            if document.tables:
-                                st.subheader("Tables:")
-                                for table in document.tables:
-                                    for row in table.rows:
-                                        row_data = [cell.text for cell in row.cells]
-                                        st.write(row_data) 
-                        view_uploaded_files()
+                                st.subheader("Document Content:")
+                                for paragraph in document.paragraphs:
+                                    st.write(paragraph.text)
+
+                                if document.tables:
+                                    st.subheader("Tables:")
+                                    for table in document.tables:
+                                        for row in table.rows:
+                                            row_data = [cell.text for cell in row.cells]
+                                            st.write(row_data)
+
+                            view_uploaded_files()
+                            # Show previously uploaded file
+                            if task.get("uploaded_file_path") and os.path.exists(task["uploaded_file_path"]):
+                                st.info(f"Previously uploaded: {task['uploaded_file_name']}")
+                                if st.button(f"Preview {task['uploaded_file_name']}", key=f"preview_{index}"):
+                                    with open(task["uploaded_file_path"], "rb") as f:
+                                        doc_stream = io.BytesIO(f.read())
+                                        document = Document(doc_stream)
+                                        st.subheader("Previously Uploaded Document:")
+                                        for paragraph in document.paragraphs:
+                                            st.write(paragraph.text)
+
+
                     with col3:
-                        # Action Buttons
+                        # Update Task Button
                         if st.button(f"Update Task {index + 1}", key=f"update_button_{index}"):
                             user_data["tasks"][index] = task
                             if uploaded_file is not None:
+                                if "uploaded_file" not in user_data:
+                                    user_data["uploaded_file"] = []
                                 user_data['uploaded_file'].append(uploaded_file)
-                            update_user_data(email, user_data)     
-                       
+                            update_user_data(email, user_data)
+                            st.session_state["ai_data_stale"] = True
+
+                        # Mark Complete
                         if st.button(f"Mark As Complete", key=f"mark_complete_button_{index}"):
                             task["status"] = "Complete"
+                            user_data["tasks"][index] = task
                             update_user_data(email, user_data)
-                    
+                            st.session_state["ai_data_stale"] = True
+
+                        # Delete Task
                         if st.button(f"Delete Task {index + 1}", key=f"delete_{index}"):
+                            if "uploaded_file_path" in task and os.path.exists(task["uploaded_file_path"]):
+                                os.remove(task["uploaded_file_path"])
                             del user_data["tasks"][index]
                             update_user_data(email, user_data)
+                            st.session_state["ai_data_stale"] = True
                             break
 
-                    # Completed Tasks Sorting
+                    # Move completed tasks to a separate list
                     if task["status"] == "Complete":
-                        user_data["complete_tasks"].append(user_data["tasks"][index])
+                        user_data.setdefault("complete_tasks", []).append(user_data["tasks"][index])
                         del user_data["tasks"][index]
                         update_user_data(email, user_data)
+                        st.session_state["ai_data_stale"] = True
                         break
 
     # Display the Completed Tasks
@@ -286,11 +393,13 @@ def home_page(email):
                         task["status"] = "In-Progress"
                         user_data["tasks"].append(user_data["complete_tasks"][index])
                         del user_data["complete_tasks"][index]
-                        update_user_data(email, user_data)                        
+                        update_user_data(email, user_data)
+                        st.session_state["ai_data_stale"] = True                      
                         break
                 if st.button(f"Delete From Completed Tasks List", key=f"remove_from_completed_list_{index}"):
                     del user_data["complete_tasks"][index]
                     update_user_data(email, user_data)
+                    st.session_state["ai_data_stale"] = True
                     break
 
 
@@ -337,6 +446,7 @@ def home_page(email):
                                 tasks.append(new_task)
                                 user_data["tasks"] = tasks
                                 update_user_data(email, user_data)
+                                st.session_state["ai_data_stale"] = True
                                 st.success(f"Added task: {new_task['name']}")
                                 st.rerun()
                             elif new_task in tasks:
@@ -345,14 +455,21 @@ def home_page(email):
                                 st.error("Please enter a task.")
             add_new_task()
     
-    
-    # Display the list of tasks for editing
-    st.subheader("Current Tasks")
-    if user_data['tasks']:
-        
-        display_tasks()
-    else:
-        st.write("No Tasks Available.")
+    col1, col2 = st.columns([3,1.2])
+
+    with col1:
+        # Display the list of tasks for editing
+        st.subheader("Current Tasks")
+        if user_data['tasks']:
+            
+            display_tasks()
+        else:
+            st.write("No Tasks Available.")
+
+    with col2:
+        # Display The AI Ordered Task Completion List
+        st.subheader("Advised Task Order Completion")
+        ai_to_do_list()
 
 
 

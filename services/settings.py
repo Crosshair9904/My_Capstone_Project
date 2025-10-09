@@ -124,10 +124,12 @@ def settings_page(email):
 
         # Difficulty of courses for AI reference
         if len(user_data["courses_colors"]) >= 3:
-            user_data["difficulty_ranking"] = st.multiselect(
+            course_difficulty_list = st.multiselect(
                 "Rank courses in terms of difficulty (from hardest to easiest):",
                 user_data["courses_list"],
             )
+            user_data["difficulty_ranking"].clear()
+            user_data["difficulty_ranking"].append(course_difficulty_list)
             update_user_data(email, user_data)
             
             # Displays of Properties
@@ -144,12 +146,12 @@ def settings_page(email):
                 st.write("Colors List:")
                 for i, color in enumerate(user_data["courses_colors"]):
                     st.write(f"{color}")
-
-            with col3:
-                # Display the difficulty order
-                st.write("Difficulty Ranking:")
-                for i, course in enumerate(user_data["difficulty_ranking"]):
-                    st.write(f"{i + 1}. {course}")
+            if user_data["difficulty_ranking"] != "[]" :
+                with col3:
+                    # Display the difficulty order
+                    st.write("Difficulty Ranking:")
+                    for i, course in enumerate(user_data["difficulty_ranking"]):
+                        st.write(f"{i + 1}. {course}")
 
         else:
             col1, col2 = st.columns(2)
