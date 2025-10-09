@@ -179,7 +179,7 @@ def home_page(email):
         - Put them in a "To Do Today" category "To Do Afterwards" category and add a bit of space in between the two categories for easy legibility
         - If no other tasks after "To Do Today" category, do NOT include the "To Do Afterwards" category
         - If No current tasks at all in the database, just output "No Tasks To Order"
-        - If tasks have the same name, stick the name of their respective course in brackets when listing them in the completion order (BUT ONLY IF THE NAMES ARE EXACTLY IDENTICAL, DO NOT DO THIS FOR THOSE THAT DO NOT REQUIRE THE EXTRA SPECIFICATION)
+        - ONLY If tasks have the exact same name, stick the name of their respective course in brackets when listing them in the completion order
         """
 
         # If data was updated and AI list is stale, regenerate
