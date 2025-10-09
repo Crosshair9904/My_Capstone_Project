@@ -178,6 +178,7 @@ def home_page(email):
         - OUTPUT A POINT LIST THAT LISTS THE ORDER OF THE TASKS
         - Put them in a "To Do Today" category "To Do Afterwards" category and add a bit of space in between the two categories for easy legibility
         - If no other tasks after "To Do Today" category, do NOT include the "To Do Afterwards" category
+        - If No tasks at all, just output "No Tasks To Order"
         """
 
         # If data was updated and AI list is stale, regenerate
