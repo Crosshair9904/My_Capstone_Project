@@ -106,10 +106,27 @@ def main_app(user_email):
     
 @st.dialog("Please Login or Sign Up")
 def auth_screen():    
-    st.error("Please note that only your email will be used exclusively to keep your app usage only accessable by you, protected by your password")
+    
     options = ["Login", "Sign Up"]
     option = st.segmented_control(
     "", options, selection_mode="single", width="stretch", default="Login")
+
+    if option == "Sign Up":
+        st.error(f"""
+            Please note that only your email will be used exclusively to keep your app usage only accessable by you, protected by your password.
+             
+            When first signing up, you will enter your information and then try to sign in, it will NOT work immediately, you will recieve an email with a link to confirm your account by the provider Supabase, click the link and try to login again.             
+             
+             """)
+    if option == "Login":
+        st.error(f"""
+            Please note that only your email will be used exclusively to keep your app usage only accessable by you, protected by your password.
+            
+            Do not give the AI Assistant any personal information, as it sends requests to Google to process it's responses.
+             
+             
+             """)
+    
     email = st.text_input("Email")
     password = st.text_input("Password", type="password")
 
