@@ -81,30 +81,12 @@ def get_user_data(email):
     return raw_data
 
 
-def get_week_bounds():
-    """Return today's date, start of week, and end of week (all as date objects)."""
-    today = datetime.today().date()
-    start_of_week = today - timedelta(days=today.isoweekday() - 1)  # Monday start
-    end_of_week = start_of_week + timedelta(days=6)
-    return today, start_of_week, end_of_week
-
 
 user_data = get_user_data(st.session_state['username'])
-today, start, end = get_week_bounds()
 
-def parse(d):
-        return datetime.fromisoformat(d).date()  # all tasks stored as strings
-todays_tasks = [
-        task["name"]
-        for task in user_data['tasks']
-        if parse(task["due_date"]) == today
-    ]
-
-this_weeks_tasks = [
-    task["name"]
-    for task in user_data['tasks']
-    if start <= parse(task["due_date"]) <= end and parse(task["due_date"]) != today
-]
+# Initialize chat history in session (only for current app run)
+if "current_ai_session" not in st.session_state:
+    st.session_state["current_ai_session"] = []
 
 
 
@@ -136,65 +118,47 @@ def ai(email):
     
     st.header("AI Tools")
 
-    col1, col2= st.columns([1, 2.5])
-
-
-
-    #Indicator of what is due today
-    with col1:
-        st.subheader("Tasks Due Today:")   
-
-        if todays_tasks:
-            for task_name in todays_tasks:
-                st.markdown(f"- **{task_name}**")
-        else:
-            st.write("No Tasks Due For Today")
-
-    # Indicator of what is due later in the same week
-        st.subheader("Tasks Due Later This Week:")
-
-        if this_weeks_tasks:
-            for task_name in this_weeks_tasks:
-                st.markdown(f"- **{task_name}**")
-        else:
-            st.write("No Tasks Due This Week")
 
     # Configure the Gemini API with the securely stored key
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 
     # Initialize the Gemini model
     model = genai.GenerativeModel("gemini-2.5-flash")
-    user_input = st.text_input("Enter your prompt:")
-
-    if st.button("Get Response"):
-        if user_input:
-            with st.spinner("Generating response..."):
-                response = model.generate_content(user_input)
-                st.write(response.text)
-        else:
-            st.warning("Please enter a prompt.")
-
-
-                    
-
-
-                
-
-
     
+    # Display history
+    for entry in st.session_state["current_ai_session"]:
+        with st.chat_message(email):
+            st.markdown(entry["user_input"])
+        with st.chat_message("AI Assistant"):
+            st.markdown(entry["ai_response"])
 
-        
+    # Input
+    user_input = st.chat_input("Prompt AI Assistant")
 
+    if user_input:
+        with st.chat_message("user"):
+            st.markdown(user_input)
 
+        with st.spinner("Generating Response"):
+            response = model.generate_content(user_input)
+            ai_response = response.text
 
+        with st.chat_message("assistant"):
+            st.markdown(ai_response)
 
+        # Save chat
+        new_entry = {
+            "user_input": user_input,
+            "ai_response": ai_response,
+            "course": task['course'],
+            "timestamp": datetime.utcnow().isoformat()
+        }
 
+        st.session_state["current_ai_session"].append(new_entry)
+        the_ai_history.append(new_entry)
+        user_data["ai_history"] = the_ai_history
+        update_user_data(email, user_data)
 
 
 ai(st.session_state['username'])
 
-# Things that need to happen:
-# - Ai history is stored in database so it can callback anything previously done
-# - Give AI access to course difficulty list and all task data so that it can give a logical to-do-list in a logical order      DONE!!!!
-# - Add an area in notes section so that it can summarize documents and give additional info on it
-# - Possibly make an interface to allow for quiz creation to aid in studying                                                    DONE!!!!

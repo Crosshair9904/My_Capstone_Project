@@ -361,8 +361,8 @@ def home_page(email):
 
 
                                 st.header("AI Tools")
-                                col6, col7,= st.columns(2)
-                                with col6:
+                               
+                                def generate_quiz_button():
                                     if st.button("Generate Quiz", key=f"generate_quiz_button_{index}"):
 
                                         # Configure Gemini
@@ -402,7 +402,8 @@ def home_page(email):
                                             # Trigger the quiz dialog
                                             show_quiz_dialog(ai_output, task["name"])
 
-                                with col7:
+                            
+                                def summary_button():
                                     if st.button("Summarize", key=f"summarize_button_{index}"):
                                         # Configure Gemini
                                         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
@@ -456,6 +457,105 @@ def home_page(email):
 
                                             # Trigger the quiz dialog
                                             show_ai_summary(ai_output_summary)
+
+                                if st.session_state["current_ai_session"]:
+                                    col6, col7, col8= st.columns(3)
+
+                                    with col6:
+                                        generate_quiz_button()
+
+                                    with col7:
+                                        summary_button()
+
+                                    with col8:
+                                        if st.button("Clear Chat Session"):
+                                            st.session_state["current_ai_session"] = []
+                                else:
+                                    col6, col7,= st.columns(2)
+
+                                    with col6:
+                                        generate_quiz_button()
+
+                                    with col7:
+                                        summary_button()
+
+
+
+                            # Configure the Gemini API with the securely stored key
+                            genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+
+                            # Initialize the Gemini model
+                            genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+                            model = genai.GenerativeModel(
+                                model_name="gemini-2.5-flash",
+                                generation_config=genai.GenerationConfig(temperature=1.1)
+                            )
+                            
+                            # Display history
+                            for entry in st.session_state["current_ai_session"]:
+                                with st.chat_message("user"):
+                                    st.markdown(entry["user_input"])
+                                with st.chat_message("assistant"):
+                                    st.markdown(entry["ai_response"])
+
+                            # Input
+                            user_input = st.chat_input("Prompt AI Assistant")
+
+                            prompt = f"""
+
+                            You are a friendly, supportive, and knowledgeable AI study assistant helping students learn effectively.
+
+                            Speak in an approachable, encouraging tone — like a helpful tutor or study buddy. Be patient, clear, and non-judgmental.
+
+                            Your main goals:
+                            - Explain complex topics in simple, easy-to-understand language
+                            - Provide summaries, examples, and memory aids (like mnemonics)
+                            - Ask clarifying questions when a student's request is unclear
+                            - Help students build study skills, time management, and focus
+                            - Support motivation and celebrate effort, not just correct answers
+                            - Use analogies, real-world examples, or relatable explanations to engage students
+
+                            Avoid overly formal or robotic language. Always prioritize learning, understanding, and encouragement.
+                            Use the ai chat history for context for certain topics (if applicable) as well as the course to help determine the topic, the difficulty for each course set by the user to help determine how much explanation for things may be required
+                            You can also answer questions about the attatched document
+                            And of course, answer the input prompt of the user with the requirements above.
+
+                            Inputs:
+                            difficulty: {difficulty_ranking}
+                            courses: {courses}
+                            tasks: {tasks}
+                            ai chat history: {the_ai_history}
+                            attached document: {content}
+                            user input prompt: {user_input}
+
+
+                            """
+
+                            if user_input:
+                                with st.chat_message("user"):
+                                    st.markdown(user_input)
+
+                                with st.spinner("Generating Response"):
+                                    response = model.generate_content(prompt)
+                                    ai_response = response.text
+
+                                with st.chat_message("assistant"):
+                                    st.markdown(ai_response)
+
+                                # Save chat
+                                new_entry = {
+                                    "user_input": user_input,
+                                    "ai_response": ai_response,
+                                    "course": task['course'],
+                                    "timestamp": datetime.utcnow().isoformat()
+                                }
+
+                                st.session_state["current_ai_session"].append(new_entry)
+                                the_ai_history.append(new_entry)
+                                user_data["ai_history"] = the_ai_history
+                                update_user_data(email, user_data)
+
+                                
                         else:
                             st.warning("Please Upload a File to Use AI Tools")
 
@@ -639,7 +739,7 @@ def home_page(email):
                                 st.error("Please enter a task.")
             add_new_task()
     
-    col1, col2 = st.columns([3,1.2])
+    col1, col2 = st.columns([3,1])
 
     with col1:
         # Display the list of tasks for editing
