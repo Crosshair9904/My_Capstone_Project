@@ -93,7 +93,7 @@ def main_app(user_email):
 
     #defines page groups
     account_pages = [settings]
-    services_pages = [home, ai, calendar]
+    services_pages = [home]
 
     page_dict = {}
     page_dict["Services"] = services_pages
