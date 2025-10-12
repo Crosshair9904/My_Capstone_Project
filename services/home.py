@@ -142,6 +142,11 @@ def home_page(email):
     uploaded_file = user_data.get("uploaded_file", [])
     the_ai_history = user_data.get("ai_history", [])
 
+
+    if "ai_quiz" not in st.session_state:
+            st.session_state["ai_quiz"]  = []
+
+
     def ai_to_do_list():
         # Set default session variables
         if "ai_data_stale" not in st.session_state:
@@ -149,6 +154,7 @@ def home_page(email):
 
         if "ai_to_do_list_database" not in st.session_state:
             st.session_state["ai_to_do_list_database"] = []
+
 
         # Configure the Gemini API
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
@@ -158,10 +164,10 @@ def home_page(email):
         )
 
         prompt = f"""
-        Your task is to output a list of which of the users tasks in the logical order that they should be done.
+        Your task is to output a list of which of the users tasks in the logical order that they should be done in the most time efficient manor.
 
         Take the courses list and course difficulty as well as the tasks and their details in the database and create a list of which order to do the tasks in that is personalized to each users details.
-        Take the names into consideration as well to determine the gravity of the task when determining the order.
+        Take the names as well as the status of the tasks into consideration as well to determine the gravity of the task when determining the order.
 
         INPUTS
         difficulty: {difficulty_ranking}
@@ -195,8 +201,10 @@ def home_page(email):
         if st.session_state["ai_to_do_list_database"]:
             st.markdown(st.session_state["ai_to_do_list_database"][0])
 
+        
+
         # Manual update option
-        if st.button("Regenerate AI Task Order"):
+        if st.button("Regenerate AI Task Order", key = "generate_ai_task_order_button"):
             st.session_state["ai_data_stale"] = True
 
     if not courses:
@@ -258,8 +266,12 @@ def home_page(email):
                         )
                         task["effort"] = st.slider("Effort", min_value=1, max_value=5, value=task["effort"], key=f"effort_{index}")
 
+
+
+                    # Notes Section
                     # ✅ Notes Section
                     st.title("Notes")
+                    # written_notes = st.text_area("Jot Down Some Notes Here:", key=f"notes_{index}")
                     # Initialize notes if missing
                     if "written_notes" not in task:
                         task["written_notes"] = ""
@@ -269,59 +281,185 @@ def home_page(email):
                         value=task["written_notes"], 
                         key=f"notes_{index}"
                     )
+                    
+                    # File Upload
+                
+                    # Define the quiz dialog
+                    def show_quiz_dialog(ai_output, task_name):
+                        @st.dialog(f"{task_name} Quiz", width="large")
+                        def view_quiz():
+                            st.write(ai_output)
+                        view_quiz()
 
-                    # ✅ File Upload
-                    with st.expander("Upload Notes"):
-                        uploaded_file = st.file_uploader("Upload a .docx file", type=["docx"], key=f"uploaded_notes_{index}")
+                    def show_ai_summary(ai_output_summary):
+                        @st.dialog(f"{task['uploaded_file_name']} Summary", width="large")
+                        def view_ai_summary():
+                            task["uploaded_file_name"] = uploaded_file.name
+                            st.write(ai_output_summary)
+                        view_ai_summary()
 
-                                            
-                        UPLOAD_DIR = Path("uploaded_docs")
-                        UPLOAD_DIR.mkdir(exist_ok=True)
 
-                        if uploaded_file is not None:
-                            # Generate unique file name
-                            file_extension = uploaded_file.name.split('.')[-1]
-                            safe_task_name = task["name"].replace(" ", "_").lower()
-                            file_name = f"{safe_task_name}_{index}.{file_extension}"
-                            file_path = UPLOAD_DIR / file_name
+                    # Define the uploaded file preview dialog
+                    def show_uploaded_file_dialog(uploaded_file):
+                        @st.dialog("Uploaded File Preview", width="large")
+                        def view_uploaded_file():
+                            docx_bytes = uploaded_file.getvalue()
+                            doc_stream = io.BytesIO(docx_bytes)
+                            document = Document(doc_stream)
 
-                            # Save file to disk
-                            with open(file_path, "wb") as f:
-                                f.write(uploaded_file.getbuffer())
-
-                            # ✅ Save file metadata or path to task
-                            task["uploaded_file_path"] = str(file_path)
                             task["uploaded_file_name"] = uploaded_file.name
 
-                            # Show dialog with file content (optional)
-                            @st.dialog("Uploaded File")
-                            def view_uploaded_files():
-                                docx_bytes = uploaded_file.getvalue()
-                                doc_stream = io.BytesIO(docx_bytes)
-                                document = Document(doc_stream)
+                            st.subheader("Document Content:")
+                            for paragraph in document.paragraphs:
+                                st.write(paragraph.text)
 
-                                st.subheader("Document Content:")
-                                for paragraph in document.paragraphs:
-                                    st.write(paragraph.text)
+                            if document.tables:
+                                st.subheader("Tables:")
+                                for table in document.tables:
+                                    for row in table.rows:
+                                        row_data = [cell.text for cell in row.cells]
+                                        st.write(row_data)
 
-                                if document.tables:
-                                    st.subheader("Tables:")
-                                    for table in document.tables:
-                                        for row in table.rows:
-                                            row_data = [cell.text for cell in row.cells]
-                                            st.write(row_data)
 
-                            view_uploaded_files()
-                            # Show previously uploaded file
-                            if task.get("uploaded_file_path") and os.path.exists(task["uploaded_file_path"]):
-                                st.info(f"Previously uploaded: {task['uploaded_file_name']}")
+                        view_uploaded_file()
+
+                                            
+
+                    
+                    with st.expander("Upload Notes"):
+                        col9, col10 = st.columns(2)
+                        with col9:
+                            uploaded_file = st.file_uploader("Upload your file", type=["docx", "txt", "pdf"], key=f"uploaded_notes_{index}")
+
+
+                            # Extract text content from the file
+                            def extract_text(file):
+                                if file.name.endswith(".docx"):
+                                    doc = Document(file)
+                                    return "\n".join([p.text for p in doc.paragraphs])
+                                elif file.name.endswith(".txt"):
+                                    return file.read().decode("utf-8")
+                                elif file.name.endswith(".pdf"):
+                                    # Optional: Add PDF extraction support using PyMuPDF or pdfminer
+                                    return "PDF summarization not yet implemented."
+                                else:
+                                    return "Unsupported file type."
+
+                            # Handle file upload
+                            if uploaded_file:
+                                content = extract_text(uploaded_file)
+
+                        
+                        if uploaded_file:
+
+                            with col10:
+                                task['uploaded_file_name'] = uploaded_file.name
+                                st.info(f"Uploaded: {task['uploaded_file_name']}")
+
                                 if st.button(f"Preview {task['uploaded_file_name']}", key=f"preview_{index}"):
-                                    with open(task["uploaded_file_path"], "rb") as f:
-                                        doc_stream = io.BytesIO(f.read())
-                                        document = Document(doc_stream)
-                                        st.subheader("Previously Uploaded Document:")
-                                        for paragraph in document.paragraphs:
-                                            st.write(paragraph.text)
+                                    show_uploaded_file_dialog(uploaded_file)
+
+
+                                st.header("AI Tools")
+                                col6, col7,= st.columns(2)
+                                with col6:
+                                    if st.button("Generate Quiz", key=f"generate_quiz_button_{index}"):
+
+                                        # Configure Gemini
+                                        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+                                        model = genai.GenerativeModel(
+                                            model_name="gemini-2.5-flash",
+                                            generation_config=genai.GenerationConfig(temperature=1.2)
+                                        )
+
+                                        prompt = f"""
+                                        Your task is to output a quiz for the user based off of the notes they submit
+
+                                        Take the name of the task, the course, the users difficulty ranking of the course and the rest of the task data into consideration.
+                                        You will take all that info as well as the file uploaded as notes and generate a quiz relevant to what is in the notes, as well as some questions from other internet souces relevant to the topic
+
+
+                                        INPUTS
+                                        difficulty: {difficulty_ranking}
+                                        courses: {courses}
+                                        tasks: {tasks}
+                                        file: {content}
+
+                                        Formating requirements:
+                                        Generate a 20 or so question quiz on the uploaded notes (uploaded file) and other KNOWN AND CREDIBLE SOURCES
+                                        If relevant, create mulitple choice questions where the options are easily seen in the question and word questions for relevant topics
+                                        Order them in easiest to hardest as the quiz goes along
+
+                                        ONLY PROVIDE QUETSIONS THAT HAVE ACTUAL, REAL ANSWERS
+                                        """
+
+                                        with st.spinner("Generating Quiz ..."):
+                                            response = model.generate_content(prompt)
+                                            ai_output = response.text
+                                            st.session_state["ai_quiz"] = [ai_output]
+                                            st.success("Quiz Successfully Generated")
+
+                                            # Trigger the quiz dialog
+                                            show_quiz_dialog(ai_output, task["name"])
+
+                                with col7:
+                                    if st.button("Summarize", key=f"summarize_button_{index}"):
+                                        # Configure Gemini
+                                        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+                                        model = genai.GenerativeModel(
+                                            model_name="gemini-2.5-flash",
+                                            generation_config=genai.GenerationConfig(temperature=1.0)
+                                        )
+
+                                        prompt = f"""
+
+                                        You are an AI assistant designed to read and summarize documents submitted by users. Your goal is to generate a clear, concise, and informative summary of the uploaded file. Keep the summary brief, but do not omit important details or critical context.
+                                        
+                                        Instructions:
+                                        - Read and analyze the document thoroughly.
+                                        - Extract the main topics, arguments, conclusions, and any key data points or examples.
+                                        - Prioritize clarity and brevity while maintaining accuracy and completeness.
+                                        - Do not copy large chunks of text from the document.
+                                        - Do not add external information not found in the file.
+                                        
+                                        Output Format:
+                                        - Title (if available)
+                                        - Brief overview (1-5 sentences)
+                                        - Bullet-point summary of key points (5-12 items max)
+                                        - Include sections/quotation of the document where the summary points were taken from
+                                        - [Optional] Definitions or explanations of complex terms, if needed for clarity
+
+                                        Example Output (for a class note or report):
+                                        Title: Introduction to Quantum Mechanics
+                                        Overview: This document provides a basic introduction to the fundamental concepts of quantum mechanics.
+                                        Key Points:
+                                        Quantum mechanics describes the behavior of particles at atomic and subatomic scales.
+                                        Wave-particle duality means particles can behave like waves and vice versa.
+                                        The Schrödinger equation is used to predict how quantum systems evolve.
+                                        Measurement affects the system being observed (observer effect).
+                                        Applications include quantum computing, cryptography, and semiconductors.
+                                        
+                                        Inputs:
+                                        difficulty: {difficulty_ranking}
+                                        courses: {courses}
+                                        tasks: {tasks}
+                                        file: {content}
+                                        Begin your summary below:
+                                        
+
+                                        """
+                                        with st.spinner("Generating Summary ..."):
+                                            response = model.generate_content(prompt)
+                                            ai_output_summary = response.text
+                                            st.session_state["ai_summary"] = [ai_output_summary]
+                                            st.success("Summary Successfully Generated")
+
+                                            # Trigger the quiz dialog
+                                            show_ai_summary(ai_output_summary)
+                        else:
+                            st.warning("Please Upload a File to Use AI Tools")
+
+                        
 
 
                     with col3:
@@ -362,47 +500,91 @@ def home_page(email):
     # Display the Completed Tasks
     def display_completed_tasks():
         """Display completed tasks."""
-        for index, task in enumerate(user_data["complete_tasks"]):
-            with st.expander(task["name"], expanded=False):
-                col1, col2 = st.columns(2)
-                with col1:
-                    task["name"] = st.text_input("Name", value=task["name"], key=f"completed_name_{index}")
-                    task["course"] = st.selectbox(
-                        "Course",
-                        user_data["courses_list"],
-                        index=user_data["courses_list"].index(task["course"]),
-                        key=f"completed_course_{index}",
-                    )
-                with col2:
-                    task["due_date"] = st.date_input("Date Completed", value=datetime.today().date(), key=f"completed_date_{index}").isoformat()
-                # with col2:
-                #     task["status"] = st.select_slider(
-                #         "Status",
-                #         ["Not Started", "In-Progress", "Near Completion", "Complete"],
-                #         value=task["status"],
-                #         key=f"completed_status_{index}",
-                #     )
-                #     task["priority"] = st.select_slider(
-                #         "Priority",
-                #         ["Low", "Medium", "High"],
-                #         value=task["priority"],
-                #         key=f"completed_priority_{index}",
-                #     )
-                #     task["effort"] = st.slider("Effort", min_value=1, max_value=5, value=task["effort"], key=f"completed_effort_{index}")
-                
-                # Buttons
-                    if st.button(f"Move to Active Tasks List", key=f"re_add_{index}"):
-                        task["status"] = "In-Progress"
-                        user_data["tasks"].append(user_data["complete_tasks"][index])
+        if len(user_data['complete_tasks']) < 8:
+            for index, task in enumerate(user_data["complete_tasks"]):
+                with st.expander(task["name"], expanded=False):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        task["name"] = st.text_input("Name", value=task["name"], key=f"completed_name_{index}")
+                        task["course"] = st.selectbox(
+                            "Course",
+                            user_data["courses_list"],
+                            index=user_data["courses_list"].index(task["course"]),
+                            key=f"completed_course_{index}",
+                        )
+                    with col2:
+                        task["due_date"] = st.date_input("Date Completed", value=task['due_date'], key=f"completed_date_{index}").isoformat()
+                    # with col2:
+                    #     task["status"] = st.select_slider(
+                    #         "Status",
+                    #         ["Not Started", "In-Progress", "Near Completion", "Complete"],
+                    #         value=task["status"],
+                    #         key=f"completed_status_{index}",
+                    #     )
+                    #     task["priority"] = st.select_slider(
+                    #         "Priority",
+                    #         ["Low", "Medium", "High"],
+                    #         value=task["priority"],
+                    #         key=f"completed_priority_{index}",
+                    #     )
+                    #     task["effort"] = st.slider("Effort", min_value=1, max_value=5, value=task["effort"], key=f"completed_effort_{index}")
+                    
+                    # Buttons
+                        if st.button(f"Move to Active Tasks List", key=f"re_add_{index}"):
+                            task["status"] = "In-Progress"
+                            user_data["tasks"].append(user_data["complete_tasks"][index])
+                            del user_data["complete_tasks"][index]
+                            update_user_data(email, user_data)
+                            st.session_state["ai_data_stale"] = True                      
+                            break
+                    if st.button(f"Delete From Completed Tasks List", key=f"remove_from_completed_list_{index}"):
                         del user_data["complete_tasks"][index]
                         update_user_data(email, user_data)
-                        st.session_state["ai_data_stale"] = True                      
+                        st.session_state["ai_data_stale"] = True
                         break
-                if st.button(f"Delete From Completed Tasks List", key=f"remove_from_completed_list_{index}"):
-                    del user_data["complete_tasks"][index]
-                    update_user_data(email, user_data)
-                    st.session_state["ai_data_stale"] = True
-                    break
+        else: 
+            with st.expander("View Complete Tasks", expanded=False):
+                for index, task in enumerate(user_data["complete_tasks"]):
+                    with st.expander(task["name"], expanded=False):
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            task["name"] = st.text_input("Name", value=task["name"], key=f"completed_name_{index}")
+                            task["course"] = st.selectbox(
+                                "Course",
+                                user_data["courses_list"],
+                                index=user_data["courses_list"].index(task["course"]),
+                                key=f"completed_course_{index}",
+                            )
+                        with col2:
+                            task["due_date"] = st.date_input("Date Completed", value=datetime.today().date(), key=f"completed_date_{index}").isoformat()
+                        # with col2:
+                        #     task["status"] = st.select_slider(
+                        #         "Status",
+                        #         ["Not Started", "In-Progress", "Near Completion", "Complete"],
+                        #         value=task["status"],
+                        #         key=f"completed_status_{index}",
+                        #     )
+                        #     task["priority"] = st.select_slider(
+                        #         "Priority",
+                        #         ["Low", "Medium", "High"],
+                        #         value=task["priority"],
+                        #         key=f"completed_priority_{index}",
+                        #     )
+                        #     task["effort"] = st.slider("Effort", min_value=1, max_value=5, value=task["effort"], key=f"completed_effort_{index}")
+                        
+                        # Buttons
+                            if st.button(f"Move to Active Tasks List", key=f"re_add_{index}"):
+                                task["status"] = "In-Progress"
+                                user_data["tasks"].append(user_data["complete_tasks"][index])
+                                del user_data["complete_tasks"][index]
+                                update_user_data(email, user_data)
+                                st.session_state["ai_data_stale"] = True                      
+                                break
+                        if st.button(f"Delete From Completed Tasks List", key=f"remove_from_completed_list_{index}"):
+                            del user_data["complete_tasks"][index]
+                            update_user_data(email, user_data)
+                            st.session_state["ai_data_stale"] = True
+                            break
 
 
     # Add New Tasks

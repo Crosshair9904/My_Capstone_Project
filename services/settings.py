@@ -123,13 +123,13 @@ def settings_page(email):
                     update_user_data(email, user_data)
 
         # Difficulty of courses for AI reference
-        if len(user_data["courses_colors"]) >= 3:
+        if len(user_data["courses_list"]) >= 3:
             course_difficulty_list = st.multiselect(
                 "Rank courses in terms of difficulty (from hardest to easiest):",
                 user_data["courses_list"],
             )
             user_data["difficulty_ranking"].clear()
-            user_data["difficulty_ranking"].append(course_difficulty_list)
+            user_data["difficulty_ranking"] = course_difficulty_list
             update_user_data(email, user_data)
             
             # Displays of Properties

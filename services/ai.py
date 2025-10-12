@@ -197,4 +197,4 @@ ai(st.session_state['username'])
 # - Ai history is stored in database so it can callback anything previously done
 # - Give AI access to course difficulty list and all task data so that it can give a logical to-do-list in a logical order      DONE!!!!
 # - Add an area in notes section so that it can summarize documents and give additional info on it
-# - Possibly make an interface to allow for quiz creation to aid in studying
+# - Possibly make an interface to allow for quiz creation to aid in studying                                                    DONE!!!!
