@@ -100,112 +100,112 @@ def settings_page(email):
 
     st.header("Courses List")
 
-    with st.expander("Course List", expanded=False):
-        # Progress Bar
-        progress_text = "Completion of Course Selection"
-        course_progress_bar = st.progress(0, text=progress_text)
 
-        col1, col2 = st.columns(2)
+    # Progress Bar
+    progress_text = "Completion of Course Selection"
+    course_progress_bar = st.progress(0, text=progress_text)
 
-        with col2:
-            # Input to select a color for calendar
-            course_color = st.color_picker("Select Course Color", key=f"color_{st.session_state['username']}")
+    col1, col2 = st.columns(2)
+
+    with col2:
+        # Input to select a color for calendar
+        course_color = st.color_picker("Select Course Color", key=f"color_{st.session_state['username']}")
+
+    with col1:
+        # Input for new course
+        course_to_add = st.text_input("Type Course Here")
+
+        # Button to add the course to the list
+        if st.button("Add Course"):
+            if course_to_add:  # Check if the input is not empty
+                user_data["courses_list"].append(course_to_add)
+                user_data["courses_colors"].append(course_color)
+                update_user_data(email, user_data)
+
+    # Difficulty of courses for AI reference
+    if len(user_data["courses_list"]) >= 3:
+        if "difficulty_ranking_list" not in st.session_state:
+            st.session_state['difficulty_ranking'] = []
+        
+        st.session_state['difficulty_ranking'] = st.multiselect(
+            "Rank courses in terms of difficulty (from hardest to easiest):",user_data["courses_list"]
+        )
+        if st.session_state['difficulty_ranking']:
+            user_data['difficulty_ranking'] = st.session_state['difficulty_ranking'] 
+        update_user_data(email, user_data)
+        
+        # Displays of Properties
+        col1, col2, = st.columns(2)
 
         with col1:
-            # Input for new course
-            course_to_add = st.text_input("Type Course Here")
+            # Display the list of courses
+            st.write("Courses List:")
+            for i, course in enumerate(user_data["courses_list"]):
+                st.write(f"{i + 1}. {course}")
 
-            # Button to add the course to the list
-            if st.button("Add Course"):
-                if course_to_add:  # Check if the input is not empty
-                    user_data["courses_list"].append(course_to_add)
-                    user_data["courses_colors"].append(course_color)
-                    update_user_data(email, user_data)
+        # with col2:
+        #     # Display the colors list
+        #     st.write("Colors List:")
+        #     for i, color in enumerate(user_data["courses_colors"]):
+        #         st.write(f"{color}")
 
-        # Difficulty of courses for AI reference
-        if len(user_data["courses_list"]) >= 3:
-            if "difficulty_ranking_list" not in st.session_state:
-                st.session_state['difficulty_ranking'] = []
-            
-            st.session_state['difficulty_ranking'] = st.multiselect(
-                "Rank courses in terms of difficulty (from hardest to easiest):",user_data["courses_list"]
-            )
-            if st.session_state['difficulty_ranking']:
-                user_data['difficulty_ranking'] = st.session_state['difficulty_ranking'] 
-            update_user_data(email, user_data)
-            
-            # Displays of Properties
-            col1, col2, = st.columns(2)
-
-            with col1:
-                # Display the list of courses
-                st.write("Courses List:")
-                for i, course in enumerate(user_data["courses_list"]):
+        if user_data["difficulty_ranking"] != "[]" :
+            with col2:
+                # Display the difficulty order
+                st.write("Difficulty Ranking:")
+                for i, course in enumerate(user_data["difficulty_ranking"]):
                     st.write(f"{i + 1}. {course}")
 
-            # with col2:
-            #     # Display the colors list
-            #     st.write("Colors List:")
-            #     for i, color in enumerate(user_data["courses_colors"]):
-            #         st.write(f"{color}")
+    else:
+        # col1, col2 = st.columns(2)
 
-            if user_data["difficulty_ranking"] != "[]" :
+        # with col1:
+            # Display the list of courses
+            st.write("Courses List:")
+            for i, course in enumerate(user_data["courses_list"]):
+                st.write(f"{i + 1}. {course}")
+
+        # with col2:
+        #     # Display the colors list
+        #     st.write("Colors List:")
+        #     for i, color in enumerate(user_data["courses_colors"]):
+        #         st.write(f"{color}")
+
+    # Option to reset courses list
+    st.header("Edit Course List")
+
+    with st.expander("Edit Course List", expanded=False):
+        with st.form("Editing Courses List"):
+            tab1, tab2, tab3 = st.tabs(["Edit List", "Remove Course From List", "Reset List"])
+
+            # Edit Tab
+            with tab1:
+                # Select course to edit
+                course_to_edit = st.selectbox("Select a Course to Edit", user_data["courses_list"])
+
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    # Input what is to replace it
+                    replacement_course = st.text_input("Please Input New Course")
                 with col2:
-                    # Display the difficulty order
-                    st.write("Difficulty Ranking:")
-                    for i, course in enumerate(user_data["difficulty_ranking"]):
-                        st.write(f"{i + 1}. {course}")
+                    replacement_course_color = st.color_picker("Select Replacement Course Color")
 
-        else:
-            # col1, col2 = st.columns(2)
+                submitted_edited_list = st.form_submit_button("Submit Replacement Course")
 
-            # with col1:
-                # Display the list of courses
-                st.write("Courses List:")
-                for i, course in enumerate(user_data["courses_list"]):
-                    st.write(f"{i + 1}. {course}")
+            # Remove Tab
+            with tab2:
+                # Select a Course to remove from list
+                course_to_remove = st.selectbox("Select a Course to Remove", user_data["courses_list"])
 
-            # with col2:
-            #     # Display the colors list
-            #     st.write("Colors List:")
-            #     for i, color in enumerate(user_data["courses_colors"]):
-            #         st.write(f"{color}")
+                # Button to remove course
+                st.write(f"Pressing the button below will remove {course_to_remove} from the Courses List")
+                submitted_remove_course_from_list = st.form_submit_button(f"Remove {course_to_remove} from Courses List")
 
-        # Option to reset courses list
-        st.header("Edit Course List")
-
-        with st.expander("Edit Course List", expanded=False):
-            with st.form("Editing Courses List"):
-                tab1, tab2, tab3 = st.tabs(["Edit List", "Remove Course From List", "Reset List"])
-
-                # Edit Tab
-                with tab1:
-                    # Select course to edit
-                    course_to_edit = st.selectbox("Select a Course to Edit", user_data["courses_list"])
-
-                    col1, col2 = st.columns(2)
-
-                    with col1:
-                        # Input what is to replace it
-                        replacement_course = st.text_input("Please Input New Course")
-                    with col2:
-                        replacement_course_color = st.color_picker("Select Replacement Course Color")
-
-                    submitted_edited_list = st.form_submit_button("Submit Replacement Course")
-
-                # Remove Tab
-                with tab2:
-                    # Select a Course to remove from list
-                    course_to_remove = st.selectbox("Select a Course to Remove", user_data["courses_list"])
-
-                    # Button to remove course
-                    st.write(f"Pressing the button below will remove {course_to_remove} from the Courses List")
-                    submitted_remove_course_from_list = st.form_submit_button(f"Remove {course_to_remove} from Courses List")
-
-                # Reset Tab
-                with tab3:
-                    st.write("Pressing the button below will reset the entire course list")
-                    submitted_reset_list = st.form_submit_button("Reset Course List")
+            # Reset Tab
+            with tab3:
+                st.write("Pressing the button below will reset the entire course list")
+                submitted_reset_list = st.form_submit_button("Reset Course List")
 
     # What happens when the buttons are pressed
     if submitted_edited_list:
