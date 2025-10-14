@@ -10,16 +10,12 @@ from supabase import create_client, Client
 import supabase
 import json
 
-# Initialize Supabase Client
-url = st.secrets['connections']['SUPABASE_URL']
-key = st.secrets['connections']['SUPABASE_KEY']
-supabase: Client = create_client(url, key)
-
 
 # Initialize Supabase Client
 url = st.secrets['connections']['SUPABASE_URL']
 key = st.secrets['connections']['SUPABASE_KEY']
 supabase: Client = create_client(url, key)
+
 
 # Setting the Background
 def background():
@@ -57,7 +53,11 @@ def get_user_data(email):
             "courses_colors": [],
             "difficulty_ranking": [],
             "tasks": [],
-            "complete_tasks": []
+            "complete_tasks": [],
+            "written_notes":[ ],
+            "uploaded_file":[],
+            "ai_history":[],
+
         }
 
         supabase.table("user_data").insert({
