@@ -135,7 +135,7 @@ def settings_page(email):
             update_user_data(email, user_data)
             
             # Displays of Properties
-            col1, col2, col3 = st.columns(3)
+            col1, col2, = st.columns(2)
 
             with col1:
                 # Display the list of courses
@@ -143,32 +143,33 @@ def settings_page(email):
                 for i, course in enumerate(user_data["courses_list"]):
                     st.write(f"{i + 1}. {course}")
 
-            with col2:
-                # Display the colors list
-                st.write("Colors List:")
-                for i, color in enumerate(user_data["courses_colors"]):
-                    st.write(f"{color}")
+            # with col2:
+            #     # Display the colors list
+            #     st.write("Colors List:")
+            #     for i, color in enumerate(user_data["courses_colors"]):
+            #         st.write(f"{color}")
+
             if user_data["difficulty_ranking"] != "[]" :
-                with col3:
+                with col2:
                     # Display the difficulty order
                     st.write("Difficulty Ranking:")
                     for i, course in enumerate(user_data["difficulty_ranking"]):
                         st.write(f"{i + 1}. {course}")
 
         else:
-            col1, col2 = st.columns(2)
+            # col1, col2 = st.columns(2)
 
-            with col1:
+            # with col1:
                 # Display the list of courses
                 st.write("Courses List:")
                 for i, course in enumerate(user_data["courses_list"]):
                     st.write(f"{i + 1}. {course}")
 
-            with col2:
-                # Display the colors list
-                st.write("Colors List:")
-                for i, color in enumerate(user_data["courses_colors"]):
-                    st.write(f"{color}")
+            # with col2:
+            #     # Display the colors list
+            #     st.write("Colors List:")
+            #     for i, color in enumerate(user_data["courses_colors"]):
+            #         st.write(f"{color}")
 
         # Option to reset courses list
         st.header("Edit Course List")
