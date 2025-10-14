@@ -124,12 +124,14 @@ def settings_page(email):
 
         # Difficulty of courses for AI reference
         if len(user_data["courses_list"]) >= 3:
-            course_difficulty_list = st.multiselect(
-                "Rank courses in terms of difficulty (from hardest to easiest):",
-                user_data["courses_list"],
+            if "difficulty_ranking_list" not in st.session_state:
+                st.session_state['difficulty_ranking'] = []
+            
+            st.session_state['difficulty_ranking'] = st.multiselect(
+                "Rank courses in terms of difficulty (from hardest to easiest):",user_data["courses_list"]
             )
-            user_data["difficulty_ranking"].clear()
-            user_data["difficulty_ranking"] = course_difficulty_list
+            if st.session_state['difficulty_ranking']:
+                user_data['difficulty_ranking'] = st.session_state['difficulty_ranking'] 
             update_user_data(email, user_data)
             
             # Displays of Properties
