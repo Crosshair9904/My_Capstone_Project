@@ -161,6 +161,9 @@ def home_page(email):
 
         if "ai_to_do_list_database" not in st.session_state:
             st.session_state["ai_to_do_list_database"] = []
+        
+        if "current_ai_session" not in st.session_state:
+            st.session_state["current_ai_session"] = []
 
 
         # Configure the Gemini API
