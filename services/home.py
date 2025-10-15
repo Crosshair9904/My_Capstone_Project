@@ -145,12 +145,19 @@ def home_page(email):
 
     if "ai_quiz" not in st.session_state:
             st.session_state["ai_quiz"]  = []
+    if "ai_data_stale" not in st.session_state:
+            st.session_state["ai_data_stale"] = True
+    if "ai_data_stale_priority" not in st.session_state:
+            st.session_state["ai_data_stale_priority"] = True
+    if "ai_priority" not in st.session_state:
+        st.session_state['ai_priority'] = "To Be Determined"
+
 
 
     def ai_to_do_list():
         # Set default session variables
-        if "ai_data_stale" not in st.session_state:
-            st.session_state["ai_data_stale"] = True
+        # if "ai_data_stale" not in st.session_state:
+        #     st.session_state["ai_data_stale"] = True
 
         if "ai_to_do_list_database" not in st.session_state:
             st.session_state["ai_to_do_list_database"] = []
@@ -241,6 +248,8 @@ def home_page(email):
                 with st.expander(task["name"], expanded=False):
                     col1, col2, col3 = st.columns(3)
 
+
+                    # Editable inputs
                     with col1:
                         task["name"] = st.text_input("Name", value=task["name"], key=f"name_{index}")
                         task["course"] = st.selectbox(
@@ -251,20 +260,91 @@ def home_page(email):
                         )
                         task["due_date"] = st.date_input("Due Date", value=task["due_date"], key=f"date_{index}").isoformat()
 
+
                     with col2:
-                        task["status"] = st.select_slider(
-                            "Status",
-                            ["Not Started", "In-Progress", "Near Completion", "Complete"],
-                            value=task["status"],
-                            key=f"status_{index}",
-                        )
-                        task["priority"] = st.select_slider(
-                            "Priority",
-                            ["Low", "Medium", "High"],
-                            value=task["priority"],
-                            key=f"priority_{index}",
-                        )
+                        task["status"] = st.select_slider( "Status", ["Not Started", "In-Progress", "Near Completion", "Complete"], value=task["status"], key=f"status_{index}", )
                         task["effort"] = st.slider("Effort", min_value=1, max_value=5, value=task["effort"], key=f"effort_{index}")
+                        
+
+
+                        def ai_determined_priority():
+                            
+
+                            # Configure Gemini
+                            genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+                            model = genai.GenerativeModel(
+                                model_name="gemini-2.5-flash",
+                                generation_config=genai.GenerationConfig(temperature=0.0)
+                            )
+
+                            prompt = f"""
+                            You are an intelligent academic assistant. Your task is to evaluate the priority level of a student's academic task and assign it a rating of "Low", "Medium", or "High".
+                            Use the information below to make your decision. Prioritize tasks that are due soon, belong to difficult courses, or require high effort.
+
+                            Task Information:
+                            Task Name: {task['name']}
+                            Due Date: {task['due_date']}
+                            Course Name: {task['course']}
+                            Course Difficulty Ranking (1-10): {difficulty_ranking}
+                            Effort Level (Low, Medium, High): {task['effort']}
+                            Today's Date: {today}
+                            
+                            Instructions:
+                            Consider how soon the task is due compared to today's date. The closer the due date, the higher the priority.
+                            Consider the course difficulty ranking. A more difficult course (higher number) increases the task's priority.
+                            Consider the effort level. Tasks that require high effort should generally be prioritized higher.
+                            Balance all factors to give a final priority rating.
+                            Output Format:
+                            Return only the priority level: "Low", "Medium", or "High"
+                           
+                            """
+
+
+                            # If data was updated and AI list is stale, regenerate
+                            if st.session_state["ai_data_stale_priority"]:
+                                with st.spinner("Determining Task Priority"):
+                                    response = model.generate_content(prompt)
+                                    ai_output_priority = response.text
+                                    st.session_state["ai_data_stale_priority"] = False  # Mark as up-to-date
+                                    st.session_state['ai_priority'] = ai_output_priority
+
+                            # Manual update option
+                            if st.button("Regenerate Task Priority", key = (f"generate_ai_task_priority_button_{index}")):
+                                st.session_state["ai_data_stale_priority"] = True
+                        # Set task priority
+                        task["priority"] = st.session_state['ai_priority']
+
+                        # Visual color
+                        if st.session_state['ai_priority'] == "Low":
+                            color_priority = "green"
+                        if st.session_state['ai_priority'] == "Medium":
+                            color_priority = "orange"
+                        if st.session_state['ai_priority'] == "High":
+                            color_priority = "red"
+                        
+                        if st.session_state['ai_priority'] == "To Be Determined":
+                            color_priority = "blue"
+                        st.write("Priority")
+                        st.markdown(
+                            f"""
+                            <span style="
+                                background-color: {color_priority};
+                                color: white;
+                                padding: 5px 10px;
+                                border-radius: 5px;
+                                font-weight: bold;
+                            ">
+                                {task['priority']}
+                            </span>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+
+
+                        ai_determined_priority()
+
+
+                        #task["effort"] = st.slider("Effort", min_value=1, max_value=5, value=task["effort"], key=f"effort_{index}")
 
 
 
@@ -565,6 +645,7 @@ def home_page(email):
                     with col3:
                         # Update Task Button
                         if st.button(f"Update Task {index + 1}", key=f"update_button_{index}"):
+                            st.session_state[f"ai_priority_stale_{index}"] = True
                             user_data["tasks"][index] = task
                             if uploaded_file is not None:
                                 if "uploaded_file" not in user_data:
@@ -572,6 +653,7 @@ def home_page(email):
                                 user_data['uploaded_file'].append(uploaded_file)
                             update_user_data(email, user_data)
                             st.session_state["ai_data_stale"] = True
+                            st.session_state["ai_data_stale_priority"] = True
 
                         # Mark Complete
                         if st.button(f"Mark As Complete", key=f"mark_complete_button_{index}"):
@@ -579,6 +661,8 @@ def home_page(email):
                             user_data["tasks"][index] = task
                             update_user_data(email, user_data)
                             st.session_state["ai_data_stale"] = True
+                            st.session_state["ai_data_stale_priority"] = True
+
 
                         # Delete Task
                         if st.button(f"Delete Task {index + 1}", key=f"delete_{index}"):
@@ -587,6 +671,7 @@ def home_page(email):
                             del user_data["tasks"][index]
                             update_user_data(email, user_data)
                             st.session_state["ai_data_stale"] = True
+                            st.session_state["ai_data_stale_priority"] = True
                             break
 
                     # Move completed tasks to a separate list
@@ -595,6 +680,7 @@ def home_page(email):
                         del user_data["tasks"][index]
                         update_user_data(email, user_data)
                         st.session_state["ai_data_stale"] = True
+                        st.session_state["ai_data_stale_priority"] = True
                         break
 
     # Display the Completed Tasks
@@ -635,12 +721,14 @@ def home_page(email):
                             user_data["tasks"].append(user_data["complete_tasks"][index])
                             del user_data["complete_tasks"][index]
                             update_user_data(email, user_data)
-                            st.session_state["ai_data_stale"] = True                      
+                            st.session_state["ai_data_stale"] = True
+                            st.session_state["ai_data_stale_priority"] = True                     
                             break
                     if st.button(f"Delete From Completed Tasks List", key=f"remove_from_completed_list_{index}"):
                         del user_data["complete_tasks"][index]
                         update_user_data(email, user_data)
                         st.session_state["ai_data_stale"] = True
+                        st.session_state["ai_data_stale_priority"] = True
                         break
         else: 
             with st.expander("View Complete Tasks", expanded=False):
@@ -678,12 +766,14 @@ def home_page(email):
                                 user_data["tasks"].append(user_data["complete_tasks"][index])
                                 del user_data["complete_tasks"][index]
                                 update_user_data(email, user_data)
-                                st.session_state["ai_data_stale"] = True                      
+                                st.session_state["ai_data_stale"] = True
+                                st.session_state["ai_data_stale_priority"] = True                     
                                 break
                         if st.button(f"Delete From Completed Tasks List", key=f"remove_from_completed_list_{index}"):
                             del user_data["complete_tasks"][index]
                             update_user_data(email, user_data)
                             st.session_state["ai_data_stale"] = True
+                            st.session_state["ai_data_stale_priority"] = True
                             break
 
 
@@ -720,7 +810,7 @@ def home_page(email):
                     with tab2:
                         st.header("Additional Details")
                         new_task["status"] = st.select_slider("Status:", ["Not Started", "In-Progress", "Near Completion", "Complete"])
-                        new_task["priority"] = st.select_slider("Priority:", ["Low", "Medium", "High"])
+                        #new_task["priority"] = st.select_slider("Priority:", ["Low", "Medium", "High"])
                         new_task["effort"] = st.slider("Effort Required:", min_value=1, max_value=5)
 
                     # Submit
@@ -731,6 +821,7 @@ def home_page(email):
                                 user_data["tasks"] = tasks
                                 update_user_data(email, user_data)
                                 st.session_state["ai_data_stale"] = True
+                                st.session_state["ai_data_stale_priority"] = True
                                 st.success(f"Added task: {new_task['name']}")
                                 st.rerun()
                             elif new_task in tasks:
