@@ -57,6 +57,10 @@ def get_user_data(email):
             "written_notes":[ ],
             "uploaded_file":[],
             "ai_history":[],
+            "ai_use_task_ordering": False,
+            "ai_use_ai_priority": False,
+            "ai_document_assistant": False,
+            "ai_use_history": False,
 
         }
 
@@ -249,5 +253,64 @@ def settings_page(email):
 
     if len(user_data["difficulty_ranking"]) >= 3:
         course_progress_bar.progress(100, text="Course Setup Complete!")
+
+
+
+
+    if len(user_data["difficulty_ranking"]) >= 3:
+        st.header("AI Tools")
+
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            ai_task_ordering = st.checkbox(
+            "Enable AI Task Ordering",
+            value=user_data.get("ai_use_task_ordering", False)
+        )
+
+            if ai_task_ordering != user_data.get("ai_use_task_ordering", False):
+                user_data["ai_use_task_ordering"] = ai_task_ordering
+                update_user_data(email, user_data)
+
+            st.info("""
+                After enabling this option, the AI Assistant will take into consideration your task information and course difficulty settings to provide a list of your tasks in the order of which it recommends you complete them to be as time efficient as possible.       
+            """)
+        with col2:
+            ai_priority = st.checkbox(
+            "Enable AI Task Priority",
+            value=user_data.get("ai_use_ai_priority", False)
+        )
+            if ai_priority != user_data.get("ai_use_ai_priority", False):
+                user_data["ai_use_ai_priority"] = ai_priority
+                update_user_data(email, user_data)
+            st.info("""
+                After enabling this option, the AI Assistant will take into consideration your task information and course difficulty settings to provide an automatic priority rating for your tasks.   
+            """)
+            
+        with col3:
+            doc_assistant = st.checkbox(
+                "Enable AI Document Assistant",
+                value=user_data.get("ai_document_assistant", False)
+            )
+            if doc_assistant != user_data.get("ai_document_assistant", False):
+                user_data["ai_document_assistant"] = doc_assistant
+                update_user_data(email, user_data)
+            
+            st.info("""
+                After enabling this option, the AI Assistant will now have a place in your tasks menu for each task. This will allow you to use it to summarize imported document, ask questions about it, or simply just chat with it.
+            """)
+        with col4:
+            ai_toggle_history = st.checkbox(
+                "Enable AI History",
+                value = user_data.get("ai_use_history", False)
+            )
+            if ai_toggle_history != user_data.get("ai_use_history", False):
+                user_data["ai_use_history"] = ai_toggle_history
+                update_user_data(email, user_data)
+            
+            st.info("""
+                After enabling this option, the AI Assitant will remember all your interactions with it and be able to recall past discussions and use them to help with discussing new topics.
+            """)
+
 
 settings_page(st.session_state['username'])
