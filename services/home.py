@@ -45,6 +45,48 @@ def background():
     st.markdown(page_element, unsafe_allow_html=True)
 background()
 
+# Add Transparent Style Overrides
+st.markdown("""
+<style>
+/* Make all buttons transparent */
+button[kind="secondary"], button[kind="primary"], div.stButton > button {
+    background-color: rgba(255, 255, 255, 0.076) !important; /* semi-transparent white */
+    color: white !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    backdrop-filter: blur(6px); /* optional frosted glass effect */
+    transition: 0.3s ease-in-out;
+}
+
+/* Button hover effect */
+div.stButton > button:hover {
+    background-color: rgba(255, 255, 255, 0.25) !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Transparent Streamlit dialog box */
+.stDialog, .stModal, div[data-testid="stModal"], div[data-testid="stDialog"] {
+    background-color: rgba(30, 30, 30, 0.4) !important; /* semi-transparent dark */
+    color: white !important;
+    backdrop-filter: blur(10px); /* frosted glass */
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+/* Transparent container inside the dialog */
+.stDialog div, .stModal div {
+    background-color: transparent !important;
+}
+
+/* Optional: Transparent text inputs and select boxes */
+input, select, textarea {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: white !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
 # Setting The User Session
 def get_user_data(email):
     # Fetch user data from Supabase or initialize if not found
@@ -230,7 +272,15 @@ def home_page(email):
         global username
         # Display and edit tasks
         global today
-        for index, task in enumerate(user_data["tasks"]):
+
+        # Sort tasks: overdue first, then upcoming in chronological order
+        sorted_tasks = sorted(
+            user_data["tasks"],
+            key=lambda t: (
+                datetime.fromisoformat(t["due_date"]).date() >= today,  # False (overdue) < True (upcoming)
+                datetime.fromisoformat(t["due_date"]).date()      ))   # then by actual date
+                                    
+        for index, task in enumerate(sorted_tasks):
             col1, col2 = st.columns([0.55, 3])
 
             with col1:
@@ -253,488 +303,491 @@ def home_page(email):
                 )
 
             with col2:
-                with st.expander(task["name"], expanded=False):
-                    col1, col2, col3 = st.columns(3)
+                if st.button(task["name"], width="stretch"):
+                    @st.dialog("{task['name']}", width="large", )
+                    def displaying_tasks():
+                        col1, col2, col3 = st.columns(3)
 
 
-                    # Editable inputs
-                    with col1:
-                        task["name"] = st.text_input("Name", value=task["name"], key=f"name_{index}")
-                        task["course"] = st.selectbox(
-                            "Course",
-                            user_data["courses_list"],
-                            index=user_data["courses_list"].index(task["course"]),
-                            key=f"course_{index}",
-                        )
-                        task["due_date"] = st.date_input("Due Date", value=task["due_date"], key=f"date_{index}").isoformat()
+                        # Editable inputs
+                        with col1:
+                            task["name"] = st.text_input("Name", value=task["name"], key=f"name_{index}")
+                            task["course"] = st.selectbox(
+                                "Course",
+                                user_data["courses_list"],
+                                index=user_data["courses_list"].index(task["course"]),
+                                key=f"course_{index}",
+                            )
+                            task["due_date"] = st.date_input("Due Date", value=task["due_date"], key=f"date_{index}").isoformat()
 
 
-                    with col2:
-                        task["status"] = st.select_slider( "Status", ["Not Started", "In-Progress", "Near Completion", "Complete"], value=task["status"], key=f"status_{index}", )
-                        task["effort"] = st.slider("Effort", min_value=1, max_value=5, value=task["effort"], key=f"effort_{index}")
-                        
-
-
-                        def ai_determined_priority():
+                        with col2:
+                            task["status"] = st.select_slider( "Status", ["Not Started", "In-Progress", "Near Completion", "Complete"], value=task["status"], key=f"status_{index}", )
+                            task["effort"] = st.slider("Effort", min_value=1, max_value=5, value=task["effort"], key=f"effort_{index}")
                             
 
-                            # Configure Gemini
-                            genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                            model = genai.GenerativeModel(
-                                model_name="gemini-2.5-flash",
-                                generation_config=genai.GenerationConfig(temperature=0.0)
-                            )
 
-                            prompt = f"""
-                            You are a highly intelligent academic assistant tasked with evaluating the priority level of a student's academic task. Your job is to analyze each task and assign it a priority of "Low", "Medium", or "High" based on the criteria provided below.
-
-                            You will receive multiple tasks individually. For each task, consider the following factors:
-
-                            ---
-
-                            🔍 **Evaluation Criteria**:
-                            1. **Due Date Proximity**: Tasks due soon (especially within a few days of today's date) are higher priority.
-                            2. **Course Difficulty (1–10)**: Tasks from more difficult courses (higher number) are more important.
-                            3. **Effort Level**: Tasks that require "High" effort are more critical to plan early and should get higher priority.
-
-                            ---
-
-                            🧠 **Decision-Making Rules**:
-                            - Balance all three factors: due date, course difficulty, and effort level.
-                            - Use judgment — a task due very soon in an easy course with low effort might still be urgent.
-                            - Do not let any one factor completely override the others — aim for overall importance.
-
-                            ---
-
-                            📊 **Output Constraint**:
-                            You are processing a group of tasks. Only 2 out of every 4 tasks may be assigned **"High"** priority.
-                            All other tasks must be rated either **"Medium"** or **"Low"**.
-
-                            If you have already assigned two "High" ratings in the group, no further tasks in that group may be marked "High".
-
-                            ---
-
-                            📄 **Task Input**:
-
-                            Task Name: {task['name']}  
-                            Due Date: {task['due_date']}  
-                            Course Name: {task['course']}  
-                            Course Difficulty Ranking (1-10): {difficulty_ranking}  
-                            Effort Level: {task['effort']}  
-                            Today's Date: {today}  
-
-                            ---
-
-                            🎯 **Your Response**:
-                            Return only the task's priority level:  
-                            `"Low"`, `"Medium"`, or `"High"`  
-
-                            Return no explanation, no formatting — just the word.
-                           
-                            """
-
-
-                            # If data was updated and AI list is stale, regenerate
-                            if st.session_state["ai_data_stale_priority"]:
-                                with st.spinner("Determining Task Priority"):
-                                    response = model.generate_content(prompt)
-                                    ai_output_priority = response.text
-                                    st.session_state["ai_data_stale_priority"] = False  # Mark as up-to-date
-                                    st.session_state['ai_priority'] = ai_output_priority
-
-                            # Manual update option
-                            if st.button("Regenerate Task Priority", key = (f"generate_ai_task_priority_button_{index}")):
-                                st.session_state["ai_data_stale_priority"] = True
-                        # Set task priority
-                        task["priority"] = st.session_state['ai_priority']
-
-                        # Visual color
-                        if st.session_state['ai_priority'] == "Low":
-                            color_priority = "green"
-                        if st.session_state['ai_priority'] == "Medium":
-                            color_priority = "orange"
-                        if st.session_state['ai_priority'] == "High":
-                            color_priority = "red"
-                        
-                        if st.session_state['ai_priority'] == "To Be Determined":
-                            color_priority = "blue"
-                        st.write("Priority")
-                        st.markdown(
-                            f"""
-                            <span style="
-                                background-color: {color_priority};
-                                color: white;
-                                padding: 5px 10px;
-                                border-radius: 5px;
-                                font-weight: bold;
-                            ">
-                                {task['priority']}
-                            </span>
-                            """,
-                            unsafe_allow_html=True,
-                        )
-
-                        if user_data['ai_use_ai_priority'] == True:
-                            ai_determined_priority()
-                        else:
-                            task["priority"] = st.select_slider(
-                            "Priority",
-                            ["Low", "Medium", "High"],
-                            value=task["priority"],
-                            key=f"priority_{index}",
-                        )
-
-
-
-
-                    # Notes Section
-                    # ✅ Notes Section
-                    st.title("Notes")
-                    # written_notes = st.text_area("Jot Down Some Notes Here:", key=f"notes_{index}")
-                    # Initialize notes if missing
-                    if "written_notes" not in task:
-                        task["written_notes"] = ""
-
-                    task['written_notes'] = st.text_area(
-                        "Jot Down Some Notes Here:", 
-                        value=task["written_notes"], 
-                        key=f"notes_{index}",
-                        height=210
-                    )
-                    
-                    # File Upload
-                
-                    # Define the quiz dialog
-                    def show_quiz_dialog(ai_output, task_name):
-                        @st.dialog(f"{task_name} Quiz", width="large")
-                        def view_quiz():
-                            st.write(ai_output)
-                        view_quiz()
-
-                    def show_ai_summary(ai_output_summary):
-                        @st.dialog(f"{task['uploaded_file_name']} Summary", width="large")
-                        def view_ai_summary():
-                            task["uploaded_file_name"] = uploaded_file.name
-                            st.write(ai_output_summary)
-                        view_ai_summary()
-
-
-                    # Define the uploaded file preview dialog
-                    def show_uploaded_file_dialog(uploaded_file):
-                        @st.dialog("Uploaded File Preview", width="large")
-                        def view_uploaded_file():
-                            docx_bytes = uploaded_file.getvalue()
-                            doc_stream = io.BytesIO(docx_bytes)
-                            document = Document(doc_stream)
-
-                            task["uploaded_file_name"] = uploaded_file.name
-
-                            st.subheader("Document Content:")
-                            for paragraph in document.paragraphs:
-                                st.write(paragraph.text)
-
-                            if document.tables:
-                                st.subheader("Tables:")
-                                for table in document.tables:
-                                    for row in table.rows:
-                                        row_data = [cell.text for cell in row.cells]
-                                        st.write(row_data)
-
-
-                        view_uploaded_file()
-
-                                            
-
-                    
-                    with st.expander("Upload Notes"):
-                        col9, col10 = st.columns(2)
-                        with col9:
-                            uploaded_file = st.file_uploader("Upload your file", type=["docx", "txt", "pdf"], key=f"uploaded_notes_{index}")
-
-
-                            # Extract text content from the file
-                            def extract_text(file):
-                                if file.name.endswith(".docx"):
-                                    doc = Document(file)
-                                    return "\n".join([p.text for p in doc.paragraphs])
-                                elif file.name.endswith(".txt"):
-                                    return file.read().decode("utf-8")
-                                elif file.name.endswith(".pdf"):
-                                    # Optional: Add PDF extraction support using PyMuPDF or pdfminer
-                                    return "PDF summarization not yet implemented."
-                                else:
-                                    return "Unsupported file type."
-
-                            # Handle file upload
-                            if uploaded_file:
-                                content = extract_text(uploaded_file)
-
-                        
-                        if uploaded_file:
-
-                        
-
-                            with col10:
-                                task['uploaded_file_name'] = uploaded_file.name
-                                st.info(f"Uploaded: {task['uploaded_file_name']}")
-
-                                if st.button(f"Preview {task['uploaded_file_name']}", key=f"preview_{index}"):
-                                    show_uploaded_file_dialog(uploaded_file)
-
-                                if user_data['ai_document_assistant']:
-                                    st.header("AI Tools")
+                            def ai_determined_priority():
                                 
-                                    def generate_quiz_button():
-                                        if st.button("Generate Quiz", key=f"generate_quiz_button_{index}"):
 
-                                            # Configure Gemini
-                                            genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                                            model = genai.GenerativeModel(
-                                                model_name="gemini-2.5-flash",
-                                                generation_config=genai.GenerationConfig(temperature=1.2)
-                                            )
-
-                                            prompt = f"""
-                                            Your task is to output a quiz for the user based off of the notes they submit
-
-                                            Take the name of the task, the course, the users difficulty ranking of the course and the rest of the task data into consideration.
-                                            You will take all that info as well as the file uploaded as notes and generate a quiz relevant to what is in the notes, as well as some questions from other internet souces relevant to the topic
-
-
-                                            INPUTS
-                                            difficulty: {difficulty_ranking}
-                                            courses: {courses}
-                                            tasks: {tasks}
-                                            file: {content}
-
-                                            Formating requirements:
-                                            Generate a 20 or so question quiz on the uploaded notes (uploaded file) and other KNOWN AND CREDIBLE SOURCES
-                                            If relevant, create mulitple choice questions where the options are easily seen in the question and word questions for relevant topics
-                                            Order them in easiest to hardest as the quiz goes along
-
-                                            ONLY PROVIDE QUETSIONS THAT HAVE ACTUAL, REAL ANSWERS
-                                            """
-
-                                            with st.spinner("Generating Quiz ..."):
-                                                response = model.generate_content(prompt)
-                                                ai_output = response.text
-                                                st.session_state["ai_quiz"] = [ai_output]
-                                                st.success("Quiz Successfully Generated")
-
-                                                # Trigger the quiz dialog
-                                                show_quiz_dialog(ai_output, task["name"])
-
-                                
-                                    def summary_button():
-                                        if st.button("Summarize", key=f"summarize_button_{index}"):
-                                            # Configure Gemini
-                                            genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                                            model = genai.GenerativeModel(
-                                                model_name="gemini-2.5-flash",
-                                                generation_config=genai.GenerationConfig(temperature=1.0)
-                                            )
-
-                                            prompt = f"""
-
-                                            You are an AI assistant designed to read and summarize documents submitted by users. Your goal is to generate a clear, concise, and informative summary of the uploaded file. Keep the summary brief, but do not omit important details or critical context.
-                                            
-                                            Instructions:
-                                            - Read and analyze the document thoroughly.
-                                            - Extract the main topics, arguments, conclusions, and any key data points or examples.
-                                            - Prioritize clarity and brevity while maintaining accuracy and completeness.
-                                            - Do not copy large chunks of text from the document.
-                                            - Do not add external information not found in the file.
-                                            
-                                            Output Format:
-                                            - Title (if available)
-                                            - Brief overview (1-5 sentences)
-                                            - Bullet-point summary of key points (5-12 items max)
-                                            - Include sections/quotation of the document where the summary points were taken from
-                                            - [Optional] Definitions or explanations of complex terms, if needed for clarity
-
-                                            Example Output (for a class note or report):
-                                            Title: Introduction to Quantum Mechanics
-                                            Overview: This document provides a basic introduction to the fundamental concepts of quantum mechanics.
-                                            Key Points:
-                                            Quantum mechanics describes the behavior of particles at atomic and subatomic scales.
-                                            Wave-particle duality means particles can behave like waves and vice versa.
-                                            The Schrödinger equation is used to predict how quantum systems evolve.
-                                            Measurement affects the system being observed (observer effect).
-                                            Applications include quantum computing, cryptography, and semiconductors.
-                                            
-                                            Inputs:
-                                            difficulty: {difficulty_ranking}
-                                            courses: {courses}
-                                            tasks: {tasks}
-                                            file: {content}
-                                            Begin your summary below:
-                                            
-
-                                            """
-                                            with st.spinner("Generating Summary ..."):
-                                                response = model.generate_content(prompt)
-                                                ai_output_summary = response.text
-                                                st.session_state["ai_summary"] = [ai_output_summary]
-                                                st.success("Summary Successfully Generated")
-
-                                                # Trigger the quiz dialog
-                                                show_ai_summary(ai_output_summary)
-
-                                    if st.session_state["current_ai_session"]:
-                                        col6, col7, col8= st.columns(3)
-
-                                        with col6:
-                                            generate_quiz_button()
-
-                                        with col7:
-                                            summary_button()
-
-                                        with col8:
-                                            if st.button("Clear Chat Session"):
-                                                st.session_state["current_ai_session"] = []
-                                    else:
-                                        col6, col7,= st.columns(2)
-
-                                        with col6:
-                                            generate_quiz_button()
-
-                                        with col7:
-                                            summary_button()
-
-
-
-                            if user_data['ai_document_assistant']:        
-                                # Configure Gemini API
+                                # Configure Gemini
                                 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-
-                                # Initialize Gemini Model 
                                 model = genai.GenerativeModel(
                                     model_name="gemini-2.5-flash",
-                                    generation_config=genai.GenerationConfig(temperature=1.1)
+                                    generation_config=genai.GenerationConfig(temperature=0.0)
                                 )
 
-                                # Load AI History Only If Enabled
-                                if user_data.get("ai_use_history", False):
-                                    for entry in st.session_state.get("current_ai_session", []):
-                                        with st.chat_message("user"):
-                                            st.markdown(entry["user_input"])
-                                        with st.chat_message("assistant"):
-                                            st.markdown(entry["ai_response"])
-
-                                # AI Chat Input 
-                                user_input = st.chat_input("Prompt AI Assistant")
-
-                                # Conditionally include AI history in the prompt 
-                                the_ai_history = (
-                                    user_data.get("ai_history", []) if user_data.get("ai_use_history", False) else []
-                                )
-
-                                # Ai Prompt
                                 prompt = f"""
-                                You are a friendly, supportive, and knowledgeable AI study assistant helping students learn effectively.
+                                You are a highly intelligent academic assistant tasked with evaluating the priority level of a student's academic task. Your job is to analyze each task and assign it a priority of "Low", "Medium", or "High" based on the criteria provided below.
 
-                                Speak in an approachable, encouraging tone — like a helpful tutor or study buddy. Be patient, clear, and non-judgmental.
+                                You will receive multiple tasks individually. For each task, consider the following factors:
 
-                                Your main goals:
-                                - Explain complex topics in simple, easy-to-understand language
-                                - Provide summaries, examples, and memory aids (like mnemonics)
-                                - Ask clarifying questions when a student's request is unclear
-                                - Help students build study skills, time management, and focus
-                                - Support motivation and celebrate effort, not just correct answers
-                                - Use analogies, real-world examples, or relatable explanations to engage students
+                                ---
 
-                                Avoid overly formal or robotic language. Always prioritize learning, understanding, and encouragement.
+                                🔍 **Evaluation Criteria**:
+                                1. **Due Date Proximity**: Tasks due soon (especially within a few days of today's date) are higher priority.
+                                2. **Course Difficulty (1–10)**: Tasks from more difficult courses (higher number) are more important.
+                                3. **Effort Level**: Tasks that require "High" effort are more critical to plan early and should get higher priority.
 
-                                Use the AI chat history for context (if applicable), as well as the course list and difficulty settings to adapt explanations.
-                                You can also answer questions about the attached document.
-                                And of course, respond helpfully to the user prompt.
+                                ---
 
-                                Inputs:
-                                difficulty: {difficulty_ranking}
-                                courses: {courses}
-                                tasks: {tasks}
-                                ai chat history: {the_ai_history}
-                                attached document: {content}
-                                user input prompt: {user_input}
+                                🧠 **Decision-Making Rules**:
+                                - Balance all three factors: due date, course difficulty, and effort level.
+                                - Use judgment — a task due very soon in an easy course with low effort might still be urgent.
+                                - Do not let any one factor completely override the others — aim for overall importance.
+
+                                ---
+
+                                📊 **Output Constraint**:
+                                You are processing a group of tasks. Only 2 out of every 4 tasks may be assigned **"High"** priority.
+                                All other tasks must be rated either **"Medium"** or **"Low"**.
+
+                                If you have already assigned two "High" ratings in the group, no further tasks in that group may be marked "High".
+
+                                ---
+
+                                📄 **Task Input**:
+
+                                Task Name: {task['name']}  
+                                Due Date: {task['due_date']}  
+                                Course Name: {task['course']}  
+                                Course Difficulty Ranking (1-10): {difficulty_ranking}  
+                                Effort Level: {task['effort']}  
+                                Today's Date: {today}  
+
+                                ---
+
+                                🎯 **Your Response**:
+                                Return only the task's priority level:  
+                                `"Low"`, `"Medium"`, or `"High"`  
+
+                                Return no explanation, no formatting — just the word.
+                            
                                 """
 
-                                # Process User Input 
-                                if user_input:
-                                    with st.chat_message("user"):
-                                        st.markdown(user_input)
 
-                                    with st.spinner("Generating Response"):
+                                # If data was updated and AI list is stale, regenerate
+                                if st.session_state["ai_data_stale_priority"]:
+                                    with st.spinner("Determining Task Priority"):
                                         response = model.generate_content(prompt)
-                                        ai_response = response.text
+                                        ai_output_priority = response.text
+                                        st.session_state["ai_data_stale_priority"] = False  # Mark as up-to-date
+                                        st.session_state['ai_priority'] = ai_output_priority
 
-                                    with st.chat_message("assistant"):
-                                        st.markdown(ai_response)
+                                # Manual update option
+                                if st.button("Regenerate Task Priority", key = (f"generate_ai_task_priority_button_{index}")):
+                                    st.session_state["ai_data_stale_priority"] = True
+                            # Set task priority
+                            task["priority"] = st.session_state['ai_priority']
 
-                                    # Save AI History Only If Enabled 
-                                    if user_data.get("ai_use_history", False):
-                                        new_entry = {
-                                            "user_input": user_input,
-                                            "ai_response": ai_response,
-                                            "course": task['course'] if 'task' in locals() else None,
-                                            "timestamp": datetime.utcnow().isoformat()
-                                        }
+                            # Visual color
+                            if st.session_state['ai_priority'] == "Low":
+                                color_priority = "green"
+                            if st.session_state['ai_priority'] == "Medium":
+                                color_priority = "orange"
+                            if st.session_state['ai_priority'] == "High":
+                                color_priority = "red"
+                            
+                            if st.session_state['ai_priority'] == "To Be Determined":
+                                color_priority = "blue"
+                            st.write("Priority")
+                            st.markdown(
+                                f"""
+                                <span style="
+                                    background-color: {color_priority};
+                                    color: white;
+                                    padding: 5px 10px;
+                                    border-radius: 5px;
+                                    font-weight: bold;
+                                ">
+                                    {task['priority']}
+                                </span>
+                                """,
+                                unsafe_allow_html=True,
+                            )
 
-                                        st.session_state.setdefault("current_ai_session", []).append(new_entry)
-                                        user_data.setdefault("ai_history", []).append(new_entry)
-                                        update_user_data(email, user_data)
+                            if user_data['ai_use_ai_priority'] == True:
+                                ai_determined_priority()
+                            else:
+                                task["priority"] = st.select_slider(
+                                "Priority",
+                                ["Low", "Medium", "High"],
+                                value=task["priority"],
+                                key=f"priority_{index}",
+                            )
 
-                        # Warn if Document Missing and Needed 
-                        elif not uploaded_file and user_data.get("ai_document_assistant", False):
+
+
+
+                        # Notes Section
+                        # ✅ Notes Section
+                        st.title("Notes")
+                        # written_notes = st.text_area("Jot Down Some Notes Here:", key=f"notes_{index}")
+                        # Initialize notes if missing
+                        if "written_notes" not in task:
+                            task["written_notes"] = ""
+
+                        task['written_notes'] = st.text_area(
+                            "Jot Down Some Notes Here:", 
+                            value=task["written_notes"], 
+                            key=f"notes_{index}",
+                            height=210
+                        )
+                        
+                        # File Upload
+                    
+                        # Define the quiz dialog
+                        def show_quiz_dialog(ai_output, task_name):
+                            @st.dialog(f"{task_name} Quiz", width="large")
+                            def view_quiz():
+                                st.write(ai_output)
+                            view_quiz()
+
+                        def show_ai_summary(ai_output_summary):
+                            @st.dialog(f"{task['uploaded_file_name']} Summary", width="large")
+                            def view_ai_summary():
+                                task["uploaded_file_name"] = uploaded_file.name
+                                st.write(ai_output_summary)
+                            view_ai_summary()
+
+
+                        # Define the uploaded file preview dialog
+                        def show_uploaded_file_dialog(uploaded_file):
+                            @st.dialog("Uploaded File Preview", width="large")
+                            def view_uploaded_file():
+                                docx_bytes = uploaded_file.getvalue()
+                                doc_stream = io.BytesIO(docx_bytes)
+                                document = Document(doc_stream)
+
+                                task["uploaded_file_name"] = uploaded_file.name
+
+                                st.subheader("Document Content:")
+                                for paragraph in document.paragraphs:
+                                    st.write(paragraph.text)
+
+                                if document.tables:
+                                    st.subheader("Tables:")
+                                    for table in document.tables:
+                                        for row in table.rows:
+                                            row_data = [cell.text for cell in row.cells]
+                                            st.write(row_data)
+
+
+                            view_uploaded_file()
+
+                                                
+
+                        
+                        with st.expander("Upload Notes"):
+                            col9, col10 = st.columns(2)
                             with col9:
-                                st.warning("Please Upload a File to Use AI Features")
+                                uploaded_file = st.file_uploader("Upload your file", type=["docx", "txt", "pdf"], key=f"uploaded_notes_{index}")
+
+
+                                # Extract text content from the file
+                                def extract_text(file):
+                                    if file.name.endswith(".docx"):
+                                        doc = Document(file)
+                                        return "\n".join([p.text for p in doc.paragraphs])
+                                    elif file.name.endswith(".txt"):
+                                        return file.read().decode("utf-8")
+                                    elif file.name.endswith(".pdf"):
+                                        # Optional: Add PDF extraction support using PyMuPDF or pdfminer
+                                        return "PDF summarization not yet implemented."
+                                    else:
+                                        return "Unsupported file type."
+
+                                # Handle file upload
+                                if uploaded_file:
+                                    content = extract_text(uploaded_file)
+
+                            
+                            if uploaded_file:
 
                             
 
-                        
+                                with col10:
+                                    task['uploaded_file_name'] = uploaded_file.name
+                                    st.info(f"Uploaded: {task['uploaded_file_name']}")
 
-                        
+                                    if st.button(f"Preview {task['uploaded_file_name']}", key=f"preview_{index}"):
+                                        show_uploaded_file_dialog(uploaded_file)
+
+                                    if user_data['ai_document_assistant']:
+                                        st.header("AI Tools")
+                                    
+                                        def generate_quiz_button():
+                                            if st.button("Generate Quiz", key=f"generate_quiz_button_{index}"):
+
+                                                # Configure Gemini
+                                                genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+                                                model = genai.GenerativeModel(
+                                                    model_name="gemini-2.5-flash",
+                                                    generation_config=genai.GenerationConfig(temperature=1.2)
+                                                )
+
+                                                prompt = f"""
+                                                Your task is to output a quiz for the user based off of the notes they submit
+
+                                                Take the name of the task, the course, the users difficulty ranking of the course and the rest of the task data into consideration.
+                                                You will take all that info as well as the file uploaded as notes and generate a quiz relevant to what is in the notes, as well as some questions from other internet souces relevant to the topic
 
 
-                    with col3:
-                        # Update Task Button
-                        if st.button(f"Update Task {index + 1}", key=f"update_button_{index}"):
-                            st.session_state[f"ai_priority_stale_{index}"] = True
-                            user_data["tasks"][index] = task
-                            if uploaded_file is not None:
-                                if "uploaded_file" not in user_data:
-                                    user_data["uploaded_file"] = []
-                                user_data['uploaded_file'].append(uploaded_file)
-                            update_user_data(email, user_data)
-                            st.session_state["ai_data_stale"] = True
-                            st.session_state["ai_data_stale_priority"] = True
+                                                INPUTS
+                                                difficulty: {difficulty_ranking}
+                                                courses: {courses}
+                                                tasks: {tasks}
+                                                file: {content}
 
-                        # Mark Complete
-                        if st.button(f"Mark As Complete", key=f"mark_complete_button_{index}"):
-                            task["status"] = "Complete"
-                            user_data["tasks"][index] = task
-                            update_user_data(email, user_data)
-                            st.session_state["ai_data_stale"] = True
-                            st.session_state["ai_data_stale_priority"] = True
+                                                Formating requirements:
+                                                Generate a 20 or so question quiz on the uploaded notes (uploaded file) and other KNOWN AND CREDIBLE SOURCES
+                                                If relevant, create mulitple choice questions where the options are easily seen in the question and word questions for relevant topics
+                                                Order them in easiest to hardest as the quiz goes along
+
+                                                ONLY PROVIDE QUETSIONS THAT HAVE ACTUAL, REAL ANSWERS
+                                                """
+
+                                                with st.spinner("Generating Quiz ..."):
+                                                    response = model.generate_content(prompt)
+                                                    ai_output = response.text
+                                                    st.session_state["ai_quiz"] = [ai_output]
+                                                    st.success("Quiz Successfully Generated")
+
+                                                    # Trigger the quiz dialog
+                                                    show_quiz_dialog(ai_output, task["name"])
+
+                                    
+                                        def summary_button():
+                                            if st.button("Summarize", key=f"summarize_button_{index}"):
+                                                # Configure Gemini
+                                                genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+                                                model = genai.GenerativeModel(
+                                                    model_name="gemini-2.5-flash",
+                                                    generation_config=genai.GenerationConfig(temperature=1.0)
+                                                )
+
+                                                prompt = f"""
+
+                                                You are an AI assistant designed to read and summarize documents submitted by users. Your goal is to generate a clear, concise, and informative summary of the uploaded file. Keep the summary brief, but do not omit important details or critical context.
+                                                
+                                                Instructions:
+                                                - Read and analyze the document thoroughly.
+                                                - Extract the main topics, arguments, conclusions, and any key data points or examples.
+                                                - Prioritize clarity and brevity while maintaining accuracy and completeness.
+                                                - Do not copy large chunks of text from the document.
+                                                - Do not add external information not found in the file.
+                                                
+                                                Output Format:
+                                                - Title (if available)
+                                                - Brief overview (1-5 sentences)
+                                                - Bullet-point summary of key points (5-12 items max)
+                                                - Include sections/quotation of the document where the summary points were taken from
+                                                - [Optional] Definitions or explanations of complex terms, if needed for clarity
+
+                                                Example Output (for a class note or report):
+                                                Title: Introduction to Quantum Mechanics
+                                                Overview: This document provides a basic introduction to the fundamental concepts of quantum mechanics.
+                                                Key Points:
+                                                Quantum mechanics describes the behavior of particles at atomic and subatomic scales.
+                                                Wave-particle duality means particles can behave like waves and vice versa.
+                                                The Schrödinger equation is used to predict how quantum systems evolve.
+                                                Measurement affects the system being observed (observer effect).
+                                                Applications include quantum computing, cryptography, and semiconductors.
+                                                
+                                                Inputs:
+                                                difficulty: {difficulty_ranking}
+                                                courses: {courses}
+                                                tasks: {tasks}
+                                                file: {content}
+                                                Begin your summary below:
+                                                
+
+                                                """
+                                                with st.spinner("Generating Summary ..."):
+                                                    response = model.generate_content(prompt)
+                                                    ai_output_summary = response.text
+                                                    st.session_state["ai_summary"] = [ai_output_summary]
+                                                    st.success("Summary Successfully Generated")
+
+                                                    # Trigger the quiz dialog
+                                                    show_ai_summary(ai_output_summary)
+
+                                        if st.session_state["current_ai_session"]:
+                                            col6, col7, col8= st.columns(3)
+
+                                            with col6:
+                                                generate_quiz_button()
+
+                                            with col7:
+                                                summary_button()
+
+                                            with col8:
+                                                if st.button("Clear Chat Session"):
+                                                    st.session_state["current_ai_session"] = []
+                                        else:
+                                            col6, col7,= st.columns(2)
+
+                                            with col6:
+                                                generate_quiz_button()
+
+                                            with col7:
+                                                summary_button()
 
 
-                        # Delete Task
-                        if st.button(f"Delete Task {index + 1}", key=f"delete_{index}"):
-                            if "uploaded_file_path" in task and os.path.exists(task["uploaded_file_path"]):
-                                os.remove(task["uploaded_file_path"])
+
+                                if user_data['ai_document_assistant']:        
+                                    # Configure Gemini API
+                                    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+
+                                    # Initialize Gemini Model 
+                                    model = genai.GenerativeModel(
+                                        model_name="gemini-2.5-flash",
+                                        generation_config=genai.GenerationConfig(temperature=1.1)
+                                    )
+
+                                    # Load AI History Only If Enabled
+                                    if user_data.get("ai_use_history", False):
+                                        for entry in st.session_state.get("current_ai_session", []):
+                                            with st.chat_message("user"):
+                                                st.markdown(entry["user_input"])
+                                            with st.chat_message("assistant"):
+                                                st.markdown(entry["ai_response"])
+
+                                    # AI Chat Input 
+                                    user_input = st.chat_input("Prompt AI Assistant")
+
+                                    # Conditionally include AI history in the prompt 
+                                    the_ai_history = (
+                                        user_data.get("ai_history", []) if user_data.get("ai_use_history", False) else []
+                                    )
+
+                                    # Ai Prompt
+                                    prompt = f"""
+                                    You are a friendly, supportive, and knowledgeable AI study assistant helping students learn effectively.
+
+                                    Speak in an approachable, encouraging tone — like a helpful tutor or study buddy. Be patient, clear, and non-judgmental.
+
+                                    Your main goals:
+                                    - Explain complex topics in simple, easy-to-understand language
+                                    - Provide summaries, examples, and memory aids (like mnemonics)
+                                    - Ask clarifying questions when a student's request is unclear
+                                    - Help students build study skills, time management, and focus
+                                    - Support motivation and celebrate effort, not just correct answers
+                                    - Use analogies, real-world examples, or relatable explanations to engage students
+
+                                    Avoid overly formal or robotic language. Always prioritize learning, understanding, and encouragement.
+
+                                    Use the AI chat history for context (if applicable), as well as the course list and difficulty settings to adapt explanations.
+                                    You can also answer questions about the attached document.
+                                    And of course, respond helpfully to the user prompt.
+
+                                    Inputs:
+                                    difficulty: {difficulty_ranking}
+                                    courses: {courses}
+                                    tasks: {tasks}
+                                    ai chat history: {the_ai_history}
+                                    attached document: {content}
+                                    user input prompt: {user_input}
+                                    """
+
+                                    # Process User Input 
+                                    if user_input:
+                                        with st.chat_message("user"):
+                                            st.markdown(user_input)
+
+                                        with st.spinner("Generating Response"):
+                                            response = model.generate_content(prompt)
+                                            ai_response = response.text
+
+                                        with st.chat_message("assistant"):
+                                            st.markdown(ai_response)
+
+                                        # Save AI History Only If Enabled 
+                                        if user_data.get("ai_use_history", False):
+                                            new_entry = {
+                                                "user_input": user_input,
+                                                "ai_response": ai_response,
+                                                "course": task['course'] if 'task' in locals() else None,
+                                                "timestamp": datetime.utcnow().isoformat()
+                                            }
+
+                                            st.session_state.setdefault("current_ai_session", []).append(new_entry)
+                                            user_data.setdefault("ai_history", []).append(new_entry)
+                                            update_user_data(email, user_data)
+
+                            # Warn if Document Missing and Needed 
+                            elif not uploaded_file and user_data.get("ai_document_assistant", False):
+                                with col9:
+                                    st.warning("Please Upload a File to Use AI Features")
+
+                                
+
+                            
+
+                            
+
+
+                        with col3:
+                            # Update Task Button
+                            if st.button(f"Update Task {index + 1}", key=f"update_button_{index}"):
+                                st.session_state[f"ai_priority_stale_{index}"] = True
+                                user_data["tasks"][index] = task
+                                if uploaded_file is not None:
+                                    if "uploaded_file" not in user_data:
+                                        user_data["uploaded_file"] = []
+                                    user_data['uploaded_file'].append(uploaded_file)
+                                update_user_data(email, user_data)
+                                st.session_state["ai_data_stale"] = True
+                                st.session_state["ai_data_stale_priority"] = True
+
+                            # Mark Complete
+                            if st.button(f"Mark As Complete", key=f"mark_complete_button_{index}"):
+                                task["status"] = "Complete"
+                                user_data["tasks"][index] = task
+                                update_user_data(email, user_data)
+                                st.session_state["ai_data_stale"] = True
+                                st.session_state["ai_data_stale_priority"] = True
+
+
+                            # Delete Task
+                            if st.button(f"Delete Task {index + 1}", key=f"delete_{index}"):
+                                if "uploaded_file_path" in task and os.path.exists(task["uploaded_file_path"]):
+                                    os.remove(task["uploaded_file_path"])
+                                del user_data["tasks"][index]
+                                update_user_data(email, user_data)
+                                st.session_state["ai_data_stale"] = True
+                                st.session_state["ai_data_stale_priority"] = True
+                                
+
+                        # Move completed tasks to a separate list
+                        if task["status"] == "Complete":
+                            user_data.setdefault("complete_tasks", []).append(user_data["tasks"][index])
                             del user_data["tasks"][index]
                             update_user_data(email, user_data)
                             st.session_state["ai_data_stale"] = True
                             st.session_state["ai_data_stale_priority"] = True
-                            break
-
-                    # Move completed tasks to a separate list
-                    if task["status"] == "Complete":
-                        user_data.setdefault("complete_tasks", []).append(user_data["tasks"][index])
-                        del user_data["tasks"][index]
-                        update_user_data(email, user_data)
-                        st.session_state["ai_data_stale"] = True
-                        st.session_state["ai_data_stale_priority"] = True
-                        break
+                            
+                    displaying_tasks()
 
 
 
@@ -993,7 +1046,7 @@ def home_page(email):
     # Show the current tasks with AI to do list next to it if enabled
     if user_data['ai_use_task_ordering'] == True:
         
-        col1, col2 = st.columns([3,1])
+        col1, col2 = st.columns([3,1.1])
 
         with col1:
             # Display the list of tasks for editing

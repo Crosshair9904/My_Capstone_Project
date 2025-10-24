@@ -40,6 +40,48 @@ def background():
     st.markdown(page_element, unsafe_allow_html=True)
 background()
 
+# Add Transparent Style Overrides
+st.markdown("""
+<style>
+/* Make all buttons transparent */
+button[kind="secondary"], button[kind="primary"], div.stButton > button {
+    background-color: rgba(255, 255, 255, 0.08) !important; /* semi-transparent white */
+    color: white !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    backdrop-filter: blur(6px); /* optional frosted glass effect */
+    transition: 0.3s ease-in-out;
+}
+
+/* Button hover effect */
+div.stButton > button:hover {
+    background-color: rgba(255, 255, 255, 0.25) !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Transparent Streamlit dialog box */
+.stDialog, .stModal, div[data-testid="stModal"], div[data-testid="stDialog"] {
+    background-color: rgba(30, 30, 30, 0.4) !important; /* semi-transparent dark */
+    color: white !important;
+    backdrop-filter: blur(10px); /* frosted glass */
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+/* Transparent container inside the dialog */
+.stDialog div, .stModal div {
+    background-color: transparent !important;
+}
+
+/* Optional: Transparent text inputs and select boxes */
+input, select, textarea {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: white !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
 # Setting The User Session
 def get_user_data(email):
     # Fetch user data from Supabase or initialize if not found
@@ -109,22 +151,27 @@ def settings_page(email):
     progress_text = "Completion of Course Selection"
     course_progress_bar = st.progress(0, text=progress_text)
 
-    col1, col2 = st.columns(2)
+    # Button to add the course to the list
+    if st.button("Add Course"):
+        @st.dialog("Add Course")
+        def add_course():
+            col1, col2 = st.columns(2)
 
-    with col2:
-        # Input to select a color for calendar
-        course_color = st.color_picker("Select Course Color", key=f"color_{st.session_state['username']}")
+            with col2:
+                # Input to select a color for calendar
+                course_color = st.color_picker("Select Course Color", key=f"color_{st.session_state['username']}")
 
-    with col1:
-        # Input for new course
-        course_to_add = st.text_input("Type Course Here")
+            with col1:
+                # Input for new course
+                course_to_add = st.text_input("Type Course Here")
 
-        # Button to add the course to the list
-        if st.button("Add Course"):
-            if course_to_add:  # Check if the input is not empty
+
+
+            if st.button("Add Course", key="Inside_st.dialog"):  # Check if the input is not empty
                 user_data["courses_list"].append(course_to_add)
                 user_data["courses_colors"].append(course_color)
                 update_user_data(email, user_data)
+        add_course()
 
     # Difficulty of courses for AI reference
     if len(user_data["courses_list"]) >= 3:

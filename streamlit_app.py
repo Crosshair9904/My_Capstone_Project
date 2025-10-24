@@ -101,6 +101,20 @@ A few final things to note:
 
                 """)
             how_to_use()
+        def show_changelog():
+            with st.expander("Changelog"):
+                st.write(f"""
+Version 1.0.1 includes the following changes:
+- Added Changelog in sidebar
+- Tasks are listed in order or most recent due dates to the latest
+- Simplified Course Adding and Task Viewing Menus
+- Updated UI with more transparent glass-style elements
+                            
+Date Updated:  2025/10/24              
+                            
+                            """)
+        show_changelog()
+
 
 
         st.title("Login Sucessful!")
