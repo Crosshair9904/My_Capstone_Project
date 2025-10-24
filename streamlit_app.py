@@ -4,7 +4,69 @@ from datetime import datetime, timedelta
 from st_supabase_connection import SupabaseConnection
 from supabase import create_client, Client
 
+# Setting the Background
+def background():
+    page_element="""
+    <style>
+    [data-testid="stAppViewContainer"]{
+    background-image: url("https://wallpapers.com/images/featured/dark-mountain-gd3o1mx0wxezbewk.jpg");
+    background-size: cover;
+    }
+    [data-testid="stSidebar"] {
+    background: rgba(0, 0, 0, 0);
+    }
+    [data-testid="stSidebar"]> div:first-child{
+    background-image: url("https://wallpapers.com/images/featured/dark-mountain-gd3o1mx0wxezbewk.jpg");
+    background-size: cover;
+    }
+    </style>
 
+
+    """
+
+    st.markdown(page_element, unsafe_allow_html=True)
+background()
+
+# Add Transparent Style Overrides
+st.markdown("""
+<style>
+/* Make all buttons transparent */
+button[kind="secondary"], button[kind="primary"], div.stButton > button {
+    background-color: rgba(255, 255, 255, 0.076) !important; /* semi-transparent white */
+    color: white !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    backdrop-filter: blur(6px); /* optional frosted glass effect */
+    transition: 0.3s ease-in-out;
+}
+
+/* Button hover effect */
+div.stButton > button:hover {
+    background-color: rgba(255, 255, 255, 0.25) !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Transparent Streamlit dialog box */
+.stDialog, .stModal, div[data-testid="stModal"], div[data-testid="stDialog"] {
+    background-color: rgba(30, 30, 30, 0.4) !important; /* semi-transparent dark */
+    color: white !important;
+    backdrop-filter: blur(10px); /* frosted glass */
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+/* Transparent container inside the dialog */
+.stDialog div, .stModal div {
+    background-color: transparent !important;
+}
+
+/* Optional: Transparent text inputs and select boxes */
+input, select, textarea {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: white !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+}
+</style>
+""", unsafe_allow_html=True)
 
 #TO RUN APP: RUN THE CODE AND TAKE THE PATH AND USE THE RUN COMMAND IN TERMINAL
 
