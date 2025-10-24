@@ -45,43 +45,66 @@ def background():
     st.markdown(page_element, unsafe_allow_html=True)
 background()
 
-# Add Transparent Style Overrides
+# Frosted Glass Theme CSS
 st.markdown("""
 <style>
-/* Make all buttons transparent */
+/* --- Buttons --- */
 button[kind="secondary"], button[kind="primary"], div.stButton > button {
-    background-color: rgba(255, 255, 255, 0.076) !important; /* semi-transparent white */
+    background-color: rgba(255, 255, 255, 0.08) !important; /* semi-transparent */
     color: white !important;
     border: 1px solid rgba(255, 255, 255, 0.3) !important;
-    backdrop-filter: blur(6px); /* optional frosted glass effect */
+    backdrop-filter: blur(6px);
     transition: 0.3s ease-in-out;
+    border-radius: 8px;
 }
 
-/* Button hover effect */
+/* Button hover */
 div.stButton > button:hover {
     background-color: rgba(255, 255, 255, 0.25) !important;
     border: 1px solid rgba(255, 255, 255, 0.5) !important;
 }
 
-/* Transparent Streamlit dialog box */
+/* --- Dialogs / Modals --- */
 .stDialog, .stModal, div[data-testid="stModal"], div[data-testid="stDialog"] {
-    background-color: rgba(30, 30, 30, 0.4) !important; /* semi-transparent dark */
+    background-color: rgba(30, 30, 30, 0.4) !important;
     color: white !important;
-    backdrop-filter: blur(10px); /* frosted glass */
+    backdrop-filter: blur(10px);
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
-/* Transparent container inside the dialog */
+/* Inner containers in dialogs */
 .stDialog div, .stModal div {
     background-color: transparent !important;
 }
 
-/* Optional: Transparent text inputs and select boxes */
+/* --- Inputs / Textareas / Selects --- */
 input, select, textarea {
     background-color: rgba(255, 255, 255, 0.1) !important;
     color: white !important;
     border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    border-radius: 6px;
+}
+
+/* --- Popovers (expanded content) --- */
+div[data-baseweb="popover"] {
+    background-color: rgba(30, 30, 30, 0.4) !important; 
+    color: white !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    box-shadow: none !important;
+    backdrop-filter: blur(10px) !important;
+}
+
+/* Popover inner elements */
+div[data-baseweb="popover"] * {
+    background-color: transparent !important;
+    color: white !important;
+}
+
+/* Optional: Adjust popover arrow to match background */
+div[data-baseweb="popover"]::after {
+    background-color: rgba(30, 30, 30, 0.4) !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -136,6 +159,7 @@ if "this_week_tasks" not in st.session_state:
 
 if "ai_to_do_list_database" not in st.session_state:
     st.session_state["ai_to_do_list_database"] = []
+
 
 def get_week_bounds():
     """Return today's date, start of week, and end of week (all as date objects)."""
@@ -199,7 +223,7 @@ def home_page(email):
         st.session_state['ai_priority'] = "To Be Determined"
 
 
-
+    
     def ai_to_do_list():
         if user_data['ai_use_task_ordering'] == True:
             # Set default session variables
@@ -303,8 +327,8 @@ def home_page(email):
                 )
 
             with col2:
-                if st.button(task["name"], width="stretch"):
-                    @st.dialog("{task['name']}", width="large", )
+                if st.button(task["name"], width="stretch", ):
+                    @st.dialog(f"{task['name']}", width="large",)
                     def displaying_tasks():
                         col1, col2, col3 = st.columns(3)
 
@@ -458,23 +482,26 @@ def home_page(email):
                     
                         # Define the quiz dialog
                         def show_quiz_dialog(ai_output, task_name):
-                            @st.dialog(f"{task_name} Quiz", width="large")
-                            def view_quiz():
-                                st.write(ai_output)
-                            view_quiz()
+                            #@st.dialog(f"{task_name} Quiz", width="large")
+                            with st.popover(f"{task_name} Quiz", width="stretch"):
+                                def view_quiz():
+                                    st.write(ai_output)
+                                view_quiz()
 
                         def show_ai_summary(ai_output_summary):
-                            @st.dialog(f"{task['uploaded_file_name']} Summary", width="large")
-                            def view_ai_summary():
-                                task["uploaded_file_name"] = uploaded_file.name
-                                st.write(ai_output_summary)
-                            view_ai_summary()
+                            #@st.dialog(f"{task['uploaded_file_name']} Summary", width="large")
+                            with st.popover(f"{task['uploaded_file_name']} Summary", width="stretch"):
+                                def view_ai_summary():
+                                    task["uploaded_file_name"] = uploaded_file.name
+                                    st.write(ai_output_summary)
+                                view_ai_summary()
 
 
                         # Define the uploaded file preview dialog
                         def show_uploaded_file_dialog(uploaded_file):
-                            @st.dialog("Uploaded File Preview", width="large")
-                            def view_uploaded_file():
+                            # @st.dialog("Uploaded File Preview", width="large")
+                            # def view_uploaded_file():
+                            with st.popover("Uploaded File Preview"):
                                 docx_bytes = uploaded_file.getvalue()
                                 doc_stream = io.BytesIO(docx_bytes)
                                 document = Document(doc_stream)
@@ -493,18 +520,31 @@ def home_page(email):
                                             st.write(row_data)
 
 
-                            view_uploaded_file()
+                            # view_uploaded_file()
 
                                                 
 
                         
                         with st.expander("Upload Notes"):
                             col9, col10 = st.columns(2)
+
+                            # --- Column 1: Upload file ---
                             with col9:
-                                uploaded_file = st.file_uploader("Upload your file", type=["docx", "txt", "pdf"], key=f"uploaded_notes_{index}")
+                                uploaded_file = st.file_uploader(
+                                    "Upload your file",
+                                    type=["docx", "txt", "pdf"],
+                                    key=f"uploaded_notes_{index}"
+                                )
 
+                                # Immediately persist the uploaded file into session_state
+                                if uploaded_file:
+                                    st.session_state[f"uploaded_file_{index}"] = uploaded_file
+                                    st.session_state[f"uploaded_filename_{index}"] = uploaded_file.name
 
-                                # Extract text content from the file
+                                # Retrieve file object from session_state (even across reruns)
+                                file_obj = st.session_state.get(f"uploaded_file_{index}", None)
+
+                                # Extract text content from the file (helper)
                                 def extract_text(file):
                                     if file.name.endswith(".docx"):
                                         doc = Document(file)
@@ -512,26 +552,36 @@ def home_page(email):
                                     elif file.name.endswith(".txt"):
                                         return file.read().decode("utf-8")
                                     elif file.name.endswith(".pdf"):
-                                        # Optional: Add PDF extraction support using PyMuPDF or pdfminer
                                         return "PDF summarization not yet implemented."
                                     else:
                                         return "Unsupported file type."
 
-                                # Handle file upload
-                                if uploaded_file:
-                                    content = extract_text(uploaded_file)
+                                # Only proceed once the file is stable in session_state
+                                if file_obj:
+                                    content = extract_text(file_obj)
 
-                            
-                            if uploaded_file:
-
-                            
-
+                            # --- Column 2: File preview and AI tools ---
+                            if file_obj:
                                 with col10:
-                                    task['uploaded_file_name'] = uploaded_file.name
+                                    task["uploaded_file_name"] = st.session_state[f"uploaded_filename_{index}"]
                                     st.info(f"Uploaded: {task['uploaded_file_name']}")
 
-                                    if st.button(f"Preview {task['uploaded_file_name']}", key=f"preview_{index}"):
-                                        show_uploaded_file_dialog(uploaded_file)
+                                    # File preview popover
+                                    with st.popover("Uploaded File Preview"):
+                                        docx_bytes = file_obj.getvalue()
+                                        doc_stream = io.BytesIO(docx_bytes)
+                                        document = Document(doc_stream)
+
+                                        st.subheader("Document Content:")
+                                        for paragraph in document.paragraphs:
+                                            st.write(paragraph.text)
+
+                                        if document.tables:
+                                            st.subheader("Tables:")
+                                            for table in document.tables:
+                                                for row in table.rows:
+                                                    row_data = [cell.text for cell in row.cells]
+                                                    st.write(row_data)
 
                                     if user_data['ai_document_assistant']:
                                         st.header("AI Tools")
@@ -571,7 +621,7 @@ def home_page(email):
                                                     response = model.generate_content(prompt)
                                                     ai_output = response.text
                                                     st.session_state["ai_quiz"] = [ai_output]
-                                                    st.success("Quiz Successfully Generated")
+                                                    #st.success("Quiz Successfully Generated")
 
                                                     # Trigger the quiz dialog
                                                     show_quiz_dialog(ai_output, task["name"])
@@ -1160,6 +1210,21 @@ def home_page(email):
                 "editable": True,
                 "selectable": True,
                 "selectMirror": True,
+                "eventClick": {
+                    "callback": """
+                        function(info) {
+                            window.parent.postMessage({
+                                isStreamlitMessage: true,
+                                type: 'eventClick',
+                                data: {
+                                    id: info.event.id,
+                                    title: info.event.title,
+                                    start: info.event.startStr
+                                }
+                            }, '*');
+                        }
+                    """
+                }
             }
 
 
@@ -1170,20 +1235,16 @@ def home_page(email):
 
 
 
-            # Function to add events to the calendar
             def add_events_to_calendar():
                 for index, task in enumerate(user_data['tasks']):
-                    name = task['name'] 
-
-                    # Color
                     color_index = user_data['courses_list'].index(task['course'])
                     color = user_data['courses_colors'][color_index]
-
                     due_date = str(task['due_date'])
 
                     events.append(
                         {
-                            "title": name,
+                            "id": index,  # link back to the task
+                            "title": task["name"],
                             "color": color,
                             "start": due_date,
                         }
@@ -1197,25 +1258,127 @@ def home_page(email):
                 events=events,
                 options=calendar_options,
                 custom_css="""
+                /* === Frosted Glass Calendar Theme (Preserves Event Colors) === */
+
+                /* Whole calendar container */
+                .fc {
+                    background-color: rgba(30, 30, 30, 0.25) !important;
+                    backdrop-filter: blur(12px) !important;
+                    border-radius: 16px !important;
+                    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+                    color: #fff !important;
+                }
+
+                /* Calendar toolbar */
+                .fc-toolbar.fc-header-toolbar {
+                    background-color: rgba(255, 255, 255, 0.05) !important;
+                    backdrop-filter: blur(10px);
+                    border-radius: 10px;
+                    padding: 8px;
+                    border: 1px solid rgba(255, 255, 255, 0.15);
+                    
+                }
+
+                /* Title & buttons */
+                .fc-toolbar-title {
+                    color: #fff !important;
+                    font-weight: 600;
+                    font-size: 1.6rem !important;
+                }
+                .fc-button {
+                    background-color: rgba(255, 255, 255, 0.08) !important;
+                    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+                    color: white !important;
+                    backdrop-filter: blur(8px);
+                    border-radius: 8px !important;
+                    transition: 0.3s ease-in-out;
+                }
+                .fc-button:hover {
+                    background-color: rgba(255, 255, 255, 0.25) !important;
+                }
+
+                /* Day headers and grid */
+                .fc-col-header-cell-cushion {
+                    color: rgba(255, 255, 255, 0.9) !important;
+                    font-weight: 500;
+                }
+                .fc-daygrid-day {
+                    background-color: rgba(255, 255, 255, 0.03) !important;
+                    border-color: rgba(255, 255, 255, 0.08) !important;
+                }
+                .fc-daygrid-day-number {
+                    color: rgba(255, 255, 255, 0.8) !important;
+                    font-weight: 400;
+                }
+                .fc-day-today {
+                    background-color: rgba(255, 255, 255, 0.07) !important;
+                    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+                    border-radius: 8px !important;
+                }
+
+                /* Events: preserve color, add blur via pseudo element */
+                .fc-event {
+                    position: relative;
+                    border: none !important;
+                    border-radius: 8px !important;
+                    color: #fff !important;
+                    font-weight: 500;
+                    overflow: hidden;
+                    transition: 0.2s ease-in-out;
+                }
+                .fc-event::before {
+                    content: "";
+                    position: absolute;
+                    inset: 0;
+                    backdrop-filter: blur(6px);
+                    opacity: 0.3; /* controls the glassiness over color */
+                    z-index: 0;
+                }
+                .fc-event > * {
+                    position: relative;
+                    z-index: 1;
+                }
+                .fc-event:hover {
+                    transform: scale(1.02);
+                    opacity: 0.9;
+                }
+
+                /* Past events */
                 .fc-event-past {
-                    opacity:0.8;
+                    opacity: 0.6 !important;
+                }
+
+                /* Event text */
+                .fc-event-title {
+                    font-weight: 600;
                 }
                 .fc-event-time {
                     font-style: italic;
                 }
-                .fc-event-title {
-                    font-weight: 600;
+
+                /* Popover for events */
+                .fc-popover {
+                    background-color: rgba(30, 30, 30, 0.4) !important;
+                    backdrop-filter: blur(10px);
+                    color: #fff !important;
+                    border-radius: 10px !important;
+                    border: 1px solid rgba(255, 255, 255, 0.25) !important;
                 }
-                .fc-toolbar-title {
-                    font-size: 2rem;
+
+                /* Scrollbar styling */
+                ::-webkit-scrollbar {
+                    width: 6px;
                 }
-                
+                ::-webkit-scrollbar-thumb {
+                    background-color: rgba(255, 255, 255, 0.2);
+                    border-radius: 3px;
+                }
                 """,
                 key='calendar_ai_to_do_on',
             )
-
-            if state.get("eventsSet") is not None:
-                st.session_state["events"] = state["eventsSet"]
+            
+            
 
             import socket
             try:
@@ -1259,6 +1422,21 @@ def home_page(email):
                 "editable": True,
                 "selectable": True,
                 "selectMirror": True,
+                "eventClick": {
+                    "callback": """
+                        function(info) {
+                            window.parent.postMessage({
+                                isStreamlitMessage: true,
+                                type: 'eventClick',
+                                data: {
+                                    id: info.event.id,
+                                    title: info.event.title,
+                                    start: info.event.startStr
+                                }
+                            }, '*');
+                        }
+                    """
+                }
             }
 
 
@@ -1269,20 +1447,16 @@ def home_page(email):
 
 
 
-            # Function to add events to the calendar
             def add_events_to_calendar():
                 for index, task in enumerate(user_data['tasks']):
-                    name = task['name'] 
-
-                    # Color
                     color_index = user_data['courses_list'].index(task['course'])
                     color = user_data['courses_colors'][color_index]
-
                     due_date = str(task['due_date'])
 
                     events.append(
                         {
-                            "title": name,
+                            "id": index,  # link back to the task
+                            "title": task["name"],
                             "color": color,
                             "start": due_date,
                         }
@@ -1296,34 +1470,133 @@ def home_page(email):
                 events=events,
                 options=calendar_options,
                 custom_css="""
+                /* === Frosted Glass Calendar Theme (Preserves Event Colors) === */
+
+                /* Whole calendar container */
+                .fc {
+                    background-color: rgba(30, 30, 30, 0.25) !important;
+                    backdrop-filter: blur(12px) !important;
+                    border-radius: 16px !important;
+                    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+                    color: #fff !important;
+                }
+
+                /* Calendar toolbar */
+                .fc-toolbar.fc-header-toolbar {
+                    background-color: rgba(255, 255, 255, 0.05) !important;
+                    backdrop-filter: blur(10px);
+                    border-radius: 10px;
+                    padding: 8px;
+                    border: 1px solid rgba(255, 255, 255, 0.15);
+                    
+                }
+
+                /* Title & buttons */
+                .fc-toolbar-title {
+                    color: #fff !important;
+                    font-weight: 600;
+                    font-size: 1.6rem !important;
+                }
+                .fc-button {
+                    background-color: rgba(255, 255, 255, 0.08) !important;
+                    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+                    color: white !important;
+                    backdrop-filter: blur(8px);
+                    border-radius: 8px !important;
+                    transition: 0.3s ease-in-out;
+                }
+                .fc-button:hover {
+                    background-color: rgba(255, 255, 255, 0.25) !important;
+                }
+
+                /* Day headers and grid */
+                .fc-col-header-cell-cushion {
+                    color: rgba(255, 255, 255, 0.9) !important;
+                    font-weight: 500;
+                }
+                .fc-daygrid-day {
+                    background-color: rgba(255, 255, 255, 0.03) !important;
+                    border-color: rgba(255, 255, 255, 0.08) !important;
+                }
+                .fc-daygrid-day-number {
+                    color: rgba(255, 255, 255, 0.8) !important;
+                    font-weight: 400;
+                }
+                .fc-day-today {
+                    background-color: rgba(255, 255, 255, 0.07) !important;
+                    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+                    border-radius: 8px !important;
+                }
+
+                /* Events: preserve color, add blur via pseudo element */
+                .fc-event {
+                    position: relative;
+                    border: none !important;
+                    border-radius: 8px !important;
+                    color: #fff !important;
+                    font-weight: 500;
+                    overflow: hidden;
+                    transition: 0.2s ease-in-out;
+                }
+                .fc-event::before {
+                    content: "";
+                    position: absolute;
+                    inset: 0;
+                    backdrop-filter: blur(6px);
+                    opacity: 0.3; /* controls the glassiness over color */
+                    z-index: 0;
+                }
+                .fc-event > * {
+                    position: relative;
+                    z-index: 1;
+                }
+                .fc-event:hover {
+                    transform: scale(1.02);
+                    opacity: 0.9;
+                }
+
+                /* Past events */
                 .fc-event-past {
-                    opacity:0.8;
+                    opacity: 0.6 !important;
+                }
+
+                /* Event text */
+                .fc-event-title {
+                    font-weight: 600;
                 }
                 .fc-event-time {
                     font-style: italic;
                 }
-                .fc-event-title {
-                    font-weight: 600;
+
+                /* Popover for events */
+                .fc-popover {
+                    background-color: rgba(30, 30, 30, 0.4) !important;
+                    backdrop-filter: blur(10px);
+                    color: #fff !important;
+                    border-radius: 10px !important;
+                    border: 1px solid rgba(255, 255, 255, 0.25) !important;
                 }
-                .fc-toolbar-title {
-                    font-size: 2rem;
+
+                /* Scrollbar styling */
+                ::-webkit-scrollbar {
+                    width: 6px;
                 }
-                
+                ::-webkit-scrollbar-thumb {
+                    background-color: rgba(255, 255, 255, 0.2);
+                    border-radius: 3px;
+                }
                 """,
                 key='calendar_ai_to_do_off',
             )
-
-            if state.get("eventsSet") is not None:
-                st.session_state["events"] = state["eventsSet"]
+            
+            
 
             import socket
             try:
                 print(socket.gethostbyname('<your-supabase-ref>.supabase.co'))
             except Exception as e:
                 print(f"DNS resolution failed: {e}")
-
-
-
 
 
 

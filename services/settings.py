@@ -40,43 +40,66 @@ def background():
     st.markdown(page_element, unsafe_allow_html=True)
 background()
 
-# Add Transparent Style Overrides
+# Frosted Glass Theme CSS
 st.markdown("""
 <style>
-/* Make all buttons transparent */
+/* --- Buttons --- */
 button[kind="secondary"], button[kind="primary"], div.stButton > button {
-    background-color: rgba(255, 255, 255, 0.08) !important; /* semi-transparent white */
+    background-color: rgba(255, 255, 255, 0.08) !important; /* semi-transparent */
     color: white !important;
     border: 1px solid rgba(255, 255, 255, 0.3) !important;
-    backdrop-filter: blur(6px); /* optional frosted glass effect */
+    backdrop-filter: blur(6px);
     transition: 0.3s ease-in-out;
+    border-radius: 8px;
 }
 
-/* Button hover effect */
+/* Button hover */
 div.stButton > button:hover {
     background-color: rgba(255, 255, 255, 0.25) !important;
     border: 1px solid rgba(255, 255, 255, 0.5) !important;
 }
 
-/* Transparent Streamlit dialog box */
+/* --- Dialogs / Modals --- */
 .stDialog, .stModal, div[data-testid="stModal"], div[data-testid="stDialog"] {
-    background-color: rgba(30, 30, 30, 0.4) !important; /* semi-transparent dark */
+    background-color: rgba(30, 30, 30, 0.4) !important;
     color: white !important;
-    backdrop-filter: blur(10px); /* frosted glass */
+    backdrop-filter: blur(10px);
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
-/* Transparent container inside the dialog */
+/* Inner containers in dialogs */
 .stDialog div, .stModal div {
     background-color: transparent !important;
 }
 
-/* Optional: Transparent text inputs and select boxes */
+/* --- Inputs / Textareas / Selects --- */
 input, select, textarea {
     background-color: rgba(255, 255, 255, 0.1) !important;
     color: white !important;
     border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    border-radius: 6px;
+}
+
+/* --- Popovers (expanded content) --- */
+div[data-baseweb="popover"] {
+    background-color: rgba(30, 30, 30, 0.4) !important; 
+    color: white !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    box-shadow: none !important;
+    backdrop-filter: blur(10px) !important;
+}
+
+/* Popover inner elements */
+div[data-baseweb="popover"] * {
+    background-color: transparent !important;
+    color: white !important;
+}
+
+/* Optional: Adjust popover arrow to match background */
+div[data-baseweb="popover"]::after {
+    background-color: rgba(30, 30, 30, 0.4) !important;
 }
 </style>
 """, unsafe_allow_html=True)

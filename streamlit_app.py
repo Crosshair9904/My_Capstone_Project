@@ -26,44 +26,66 @@ def background():
 
     st.markdown(page_element, unsafe_allow_html=True)
 background()
-
-# Add Transparent Style Overrides
+# Frosted Glass Theme CSS
 st.markdown("""
 <style>
-/* Make all buttons transparent */
+/* --- Buttons --- */
 button[kind="secondary"], button[kind="primary"], div.stButton > button {
-    background-color: rgba(255, 255, 255, 0.076) !important; /* semi-transparent white */
+    background-color: rgba(255, 255, 255, 0.08) !important; /* semi-transparent */
     color: white !important;
     border: 1px solid rgba(255, 255, 255, 0.3) !important;
-    backdrop-filter: blur(6px); /* optional frosted glass effect */
+    backdrop-filter: blur(6px);
     transition: 0.3s ease-in-out;
+    border-radius: 8px;
 }
 
-/* Button hover effect */
+/* Button hover */
 div.stButton > button:hover {
     background-color: rgba(255, 255, 255, 0.25) !important;
     border: 1px solid rgba(255, 255, 255, 0.5) !important;
 }
 
-/* Transparent Streamlit dialog box */
+/* --- Dialogs / Modals --- */
 .stDialog, .stModal, div[data-testid="stModal"], div[data-testid="stDialog"] {
-    background-color: rgba(30, 30, 30, 0.4) !important; /* semi-transparent dark */
+    background-color: rgba(30, 30, 30, 0.4) !important;
     color: white !important;
-    backdrop-filter: blur(10px); /* frosted glass */
+    backdrop-filter: blur(10px);
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
-/* Transparent container inside the dialog */
+/* Inner containers in dialogs */
 .stDialog div, .stModal div {
     background-color: transparent !important;
 }
 
-/* Optional: Transparent text inputs and select boxes */
+/* --- Inputs / Textareas / Selects --- */
 input, select, textarea {
     background-color: rgba(255, 255, 255, 0.1) !important;
     color: white !important;
     border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    border-radius: 6px;
+}
+
+/* --- Popovers (expanded content) --- */
+div[data-baseweb="popover"] {
+    background-color: rgba(30, 30, 30, 0.4) !important; 
+    color: white !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    box-shadow: none !important;
+    backdrop-filter: blur(10px) !important;
+}
+
+/* Popover inner elements */
+div[data-baseweb="popover"] * {
+    background-color: transparent !important;
+    color: white !important;
+}
+
+/* Optional: Adjust popover arrow to match background */
+div[data-baseweb="popover"]::after {
+    background-color: rgba(30, 30, 30, 0.4) !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -140,28 +162,28 @@ def main_app(user_email):
             @st.dialog("How To Use the App", width="large")
             def how_to_use():
                 st.write("""
-First things first, thank you for using the app, I greatly appreciate it.
+                    First things first, thank you for using the app, I greatly appreciate it.
 
-How to use the app:
+                    How to use the app:
 
-1.
-    The first thing you want to do is to enter your course info. Look to the top left corner and select the “Settings” page. You will see 	where you will enter your course information. To start, enter the name of one of your courses, select a colour for the course. This colour will be used to differentiate your different courses, so select different ones for different courses. After selecting the colour, click “Add Course”. After entering a few courses, you may notice the progress bar filling up, this means you are nearly done entering your course info. If you have added at least 3 courses, you will see a new option pop up, this is where you select your courses and place them in order of most difficult to the easiest, this will be used for some features to work more properly in the app.
+                    1.
+                        The first thing you want to do is to enter your course info. Look to the top left corner and select the “Settings” page. You will see 	where you will enter your course information. To start, enter the name of one of your courses, select a colour for the course. This colour will be used to differentiate your different courses, so select different ones for different courses. After selecting the colour, click “Add Course”. After entering a few courses, you may notice the progress bar filling up, this means you are nearly done entering your course info. If you have added at least 3 courses, you will see a new option pop up, this is where you select your courses and place them in order of most difficult to the easiest, this will be used for some features to work more properly in the app.
 
-    If you entered a course incorrectly or wish to change your list, navigate to the “Edit Course List” option and select it. From there, you can chose to edit a course in the list, remove a course from the list, or reset the list altogether. 
+                        If you entered a course incorrectly or wish to change your list, navigate to the “Edit Course List” option and select it. From there, you can chose to edit a course in the list, remove a course from the list, or reset the list altogether. 
 
-2. 
-    After setting up your courses, you will can navigate to the “AI Tools” section in the settings menu and select which AI features you would like to use, if any. They are all disabled by default and won’t work until you have enabled them. 
+                    2. 
+                        After setting up your courses, you will can navigate to the “AI Tools” section in the settings menu and select which AI features you would like to use, if any. They are all disabled by default and won’t work until you have enabled them. 
 
-    Warning: Do NOT give any personal information to the AI Assistant, as it is based on Google Gemini and sends the data to Google in order to process its response. Also, if you are using the ai features, notice how the rest of the app gets greyed out a little, this is the AI processing. Anything you do in the app while the AI is doing this will NOT be saved, so wait until it is done doing its thing and continue afterwards.
+                        Warning: Do NOT give any personal information to the AI Assistant, as it is based on Google Gemini and sends the data to Google in order to process its response. Also, if you are using the ai features, notice how the rest of the app gets greyed out a little, this is the AI processing. Anything you do in the app while the AI is doing this will NOT be saved, so wait until it is done doing its thing and continue afterwards.
 
-A few final things to note:
+                    A few final things to note:
 
-- I am not paying for the premium subscription for the database I am using, so unfortunately, you will have login every time the app reloads. Sorry :)
-- Sometimes the server for the app takes a while to load, so if the app doesn’t load immediately, give it a few minutes and it should get up and going again.
-- This is a web app, not an actual application, if you want to make it more like an app, you can turn it into a web application for your phone or computer, just look up how to do it for your specific web browser and it should work just fine.
+                    - I am not paying for the premium subscription for the database I am using, so unfortunately, you will have login every time the app reloads. Sorry :)
+                    - Sometimes the server for the app takes a while to load, so if the app doesn’t load immediately, give it a few minutes and it should get up and going again.
+                    - This is a web app, not an actual application, if you want to make it more like an app, you can turn it into a web application for your phone or computer, just look up how to do it for your specific web browser and it should work just fine.
 
 
-                """)
+                                    """)
             how_to_use()
         def show_changelog():
             with st.expander("Changelog"):
