@@ -26,6 +26,8 @@ def background():
 
     st.markdown(page_element, unsafe_allow_html=True)
 background()
+
+
 # Frosted Glass Theme CSS
 st.markdown("""
 <style>
@@ -87,8 +89,39 @@ div[data-baseweb="popover"] * {
 div[data-baseweb="popover"]::after {
     background-color: rgba(30, 30, 30, 0.4) !important;
 }
+
+/* --- Frosted Expanders --- */
+div.streamlit-expanderHeader {
+    background: rgba(255, 255, 255, 0.12) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    border-radius: 10px !important;
+    color: white !important;
+    transition: all 0.3s ease-in-out !important;
+}
+
+/* Expanded expander body */
+div.streamlit-expanderContent {
+    background: rgba(255, 255, 255, 0.08) !important;
+    backdrop-filter: blur(12px) !important;
+    border-radius: 0 0 10px 10px !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: white !important;
+}
+
+/* Hover / active glow for expander header */
+div.streamlit-expanderHeader:hover {
+    background: rgba(255, 255, 255, 0.22) !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Remove Streamlit default shadows */
+div[data-testid="stExpander"] {
+    box-shadow: none !important;
+}
 </style>
 """, unsafe_allow_html=True)
+
 
 #TO RUN APP: RUN THE CODE AND TAKE THE PATH AND USE THE RUN COMMAND IN TERMINAL
 
@@ -188,13 +221,11 @@ def main_app(user_email):
         def show_changelog():
             with st.expander("Changelog"):
                 st.write(f"""
-Version 1.0.1 includes the following changes:
-- Added Changelog in sidebar
-- Tasks are listed in order or most recent due dates to the latest
-- Simplified Course Adding and Task Viewing Menus
-- Updated UI with more transparent glass-style elements
-                            
-Date Updated:  2025/10/24              
+Version 1.0.2 includes the following changes:
+- Fixed some major bugs
+- Improved AI priority feature accuracy 
+
+Date Updated: 2025/11/05           
                             
                             """)
         show_changelog()
@@ -257,6 +288,7 @@ def auth_screen():
     
     email = st.text_input("Email")
     password = st.text_input("Password", type="password")
+    
 
     if option == "Sign Up" and st.button("Register"):
         user = sign_up(email, password)
@@ -269,6 +301,8 @@ def auth_screen():
             st.session_state.user_email = user.user.email
             st.success(f"Welcome back, {email}!")
             st.rerun()
+    
+   
 
 if "user_email" not in st.session_state:
     st.session_state.user_email = None

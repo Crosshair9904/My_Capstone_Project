@@ -39,7 +39,6 @@ def background():
 
     st.markdown(page_element, unsafe_allow_html=True)
 background()
-
 # Frosted Glass Theme CSS
 st.markdown("""
 <style>
@@ -100,6 +99,36 @@ div[data-baseweb="popover"] * {
 /* Optional: Adjust popover arrow to match background */
 div[data-baseweb="popover"]::after {
     background-color: rgba(30, 30, 30, 0.4) !important;
+}
+
+/* --- Frosted Expanders --- */
+div.streamlit-expanderHeader {
+    background: rgba(255, 255, 255, 0.12) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    border-radius: 10px !important;
+    color: white !important;
+    transition: all 0.3s ease-in-out !important;
+}
+
+/* Expanded expander body */
+div.streamlit-expanderContent {
+    background: rgba(255, 255, 255, 0.08) !important;
+    backdrop-filter: blur(12px) !important;
+    border-radius: 0 0 10px 10px !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: white !important;
+}
+
+/* Hover / active glow for expander header */
+div.streamlit-expanderHeader:hover {
+    background: rgba(255, 255, 255, 0.22) !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Remove Streamlit default shadows */
+div[data-testid="stExpander"] {
+    box-shadow: none !important;
 }
 </style>
 """, unsafe_allow_html=True)
