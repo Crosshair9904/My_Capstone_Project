@@ -218,6 +218,21 @@ def main_app(user_email):
 
                                     """)
             how_to_use()
+
+        st.markdown(
+            f"""
+            <span style="
+                background-color: green;
+                color: white;
+                padding: 5px 10px;
+                border-radius: 5px;
+                font-weight: bold;
+            ">
+                Version 1.0.2
+            </span>
+            """,
+            unsafe_allow_html=True,
+        )
         def show_changelog():
             with st.expander("Changelog"):
                 st.write(f"""
