@@ -960,40 +960,40 @@ def home_page(email):
                             st.session_state[f"ai_priority_stale_{index}"] = True
                             user_data["tasks"][index] = task
                             if uploaded_file is not None:
-                                if "uploaded_file" not in user_data:
-                                    user_data["uploaded_file"] = []
-                                user_data['uploaded_file'].append(uploaded_file)
+                                user_data.setdefault("uploaded_file", []).append(uploaded_file)
                             update_user_data(email, user_data)
                             st.session_state["ai_data_stale"] = True
                             st.session_state["ai_data_stale_priority"] = True
+                            
 
                         # Mark Complete
-                        if st.button(f"Mark As Complete", key=f"mark_complete_button_{index}"):
-                            task["status"] = "Complete"
-                            user_data["tasks"][index] = task
+                        if st.button("Mark As Complete", key=f"mark_complete_button_{index}"):
+                            # Make sure we have a place to store completed tasks
+                            user_data.setdefault("complete_tasks", [])
+
+                            # Move this specific task to completed
+                            completed_task = user_data["tasks"].pop(index)
+                            completed_task["status"] = "Complete"
+                            user_data["complete_tasks"].append(completed_task)
+
+                            # Update database
                             update_user_data(email, user_data)
+
+                            # Mark AI data as stale so priorities refresh properly
                             st.session_state["ai_data_stale"] = True
                             st.session_state["ai_data_stale_priority"] = True
 
+                            # Force page refresh after the move to avoid iterator conflicts
 
                         # Delete Task
                         if st.button(f"Delete Task {index + 1}", key=f"delete_{index}"):
                             if "uploaded_file_path" in task and os.path.exists(task["uploaded_file_path"]):
                                 os.remove(task["uploaded_file_path"])
+
                             del user_data["tasks"][index]
                             update_user_data(email, user_data)
                             st.session_state["ai_data_stale"] = True
                             st.session_state["ai_data_stale_priority"] = True
-                            break
-
-                    # Move completed tasks to a separate list
-                    if task["status"] == "Complete":
-                        user_data.setdefault("complete_tasks", []).append(user_data["tasks"][index])
-                        del user_data["tasks"][index]
-                        update_user_data(email, user_data)
-                        st.session_state["ai_data_stale"] = True
-                        st.session_state["ai_data_stale_priority"] = True
-                        break
                     
                     # Close content div
                     st.markdown("</div>", unsafe_allow_html=True)
