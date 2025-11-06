@@ -96,7 +96,44 @@ div[data-baseweb="popover"] {
     backdrop-filter: blur(10px) !important;
 }
 
-         
+/* --- Top Header / Nav Bar --- */
+header[data-testid="stHeader"] {
+    background-color: rgba(30, 30, 30, 0.4) !important; /* frosted glass */
+    backdrop-filter: blur(10px);
+    border-bottom: none !important;
+    box-shadow: none !important;
+}
+
+/* Keep icons and text visible */
+header[data-testid="stHeader"] * {
+    color: white !important;
+}
+
+/* --- Buttons in the top bar --- */
+header[data-testid="stHeader"] button {
+    background-color: rgba(255, 255, 255, 0.08) !important; /* semi-transparent */
+    color: white !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    backdrop-filter: blur(6px);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-weight: bold;
+    transition: 0.3s ease-in-out;
+}
+
+/* Hover effect for buttons */
+header[data-testid="stHeader"] button:hover {
+    background-color: rgba(255, 255, 255, 0.25) !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Optional: make main content match frosted theme */
+.main .block-container {
+    background-color: rgba(30, 30, 30, 0.3) !important;
+    border-radius: 12px;
+    padding: 20px;
+    backdrop-filter: blur(10px);
+}
 
 /* Popover inner elements */
 div[data-baseweb="popover"] * {
