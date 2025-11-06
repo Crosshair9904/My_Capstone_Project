@@ -621,34 +621,35 @@ def home_page(email):
                         )
 
                     else:
-                        # --- Manual Mode (Independent per task) ---
-                        task["priority"] = st.select_slider(
-                            "Priority",
-                            ["Low", "Medium", "High"],
-                            value=task.get("priority", "Medium"),
-                            key=f"priority_slider_{index}",
-                        )
+                        with col2:
+                            # --- Manual Mode (Independent per task) ---
+                            task["priority"] = st.select_slider(
+                                "Priority",
+                                ["Low", "Medium", "High"],
+                                value=task.get("priority", "Medium"),
+                                key=f"priority_slider_{index}",
+                            )
 
-                        color_priority = {
-                            "Low": "green",
-                            "Medium": "orange",
-                            "High": "red",
-                        }.get(task["priority"], "blue")
+                            color_priority = {
+                                "Low": "green",
+                                "Medium": "orange",
+                                "High": "red",
+                            }.get(task["priority"], "blue")
 
-                        st.markdown(
-                            f"""
-                            <span style="
-                                background-color: {color_priority};
-                                color: white;
-                                padding: 5px 10px;
-                                border-radius: 5px;
-                                font-weight: bold;
-                            ">
-                                {task['priority']}
-                            </span>
-                            """,
-                            unsafe_allow_html=True,
-                        )
+                            st.markdown(
+                                f"""
+                                <span style="
+                                    background-color: {color_priority};
+                                    color: white;
+                                    padding: 5px 10px;
+                                    border-radius: 5px;
+                                    font-weight: bold;
+                                ">
+                                    {task['priority']}
+                                </span>
+                                """,
+                                unsafe_allow_html=True,
+                            )
 
                     # Notes section
                     task["written_notes"] = st.text_area(
