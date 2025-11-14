@@ -655,7 +655,7 @@ def home_page(email):
                     task["written_notes"] = st.text_area(
                         "Notes",
                         value=task.get("written_notes", ""),
-                        key=f"notes_{index}",
+                        key=f"notes_{index}", height= 210
                     )
 
                     
@@ -1005,7 +1005,21 @@ def home_page(email):
     # Display the Completed Tasks
     def display_completed_tasks():
         with st.container(border=True):
-            """Display completed tasks."""
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                """Display completed tasks."""
+            with col2:
+                if st.button("Clear List"):
+                    @st.dialog("Confirm The Clearing of Completed Tasks List")
+                    def clear_completed_tasks_list():   
+                        st.error("By Confirming, You Will Clear All Completed Tasks")
+                        if st.button("Confirm Clear List"):
+                            user_data['complete_tasks'].clear()
+                    clear_completed_tasks_list()
+
+
+
+                
 
             if user_data['ai_use_task_ordering'] == False:
 
