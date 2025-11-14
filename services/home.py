@@ -1014,7 +1014,8 @@ def home_page(email):
                     def clear_completed_tasks_list():   
                         st.error("By Confirming, You Will Clear All Completed Tasks")
                         if st.button("Confirm Clear List"):
-                            user_data['complete_tasks'].clear()
+                            user_data["complete_tasks"].clear()
+                            update_user_data(email, user_data)
                     clear_completed_tasks_list()
 
 
@@ -1573,7 +1574,6 @@ def home_page(email):
             if user_data['complete_tasks']:
                 
                 display_completed_tasks()
-
             else:
                 st.write("You Have Not Completed Any Tasks.")
 
