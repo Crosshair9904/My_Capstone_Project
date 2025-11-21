@@ -958,9 +958,7 @@ def home_page(email):
                         # Update Task Button
                         if st.button(f"Update Task {index + 1}", key=f"update_button_{index}"):
                             st.session_state[f"ai_priority_stale_{index}"] = True
-                            user_data["tasks"][index] = task
-                            if uploaded_file is not None:
-                                user_data.setdefault("uploaded_file", []).append(uploaded_file)
+                            # user_data["tasks"][index] = task
                             update_user_data(email, user_data)
                             st.session_state["ai_data_stale"] = True
                             st.session_state["ai_data_stale_priority"] = True
