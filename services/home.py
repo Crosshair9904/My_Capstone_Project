@@ -50,7 +50,7 @@ st.markdown("""
 <style>
 /* --- Buttons --- */
 button[kind="secondary"], button[kind="primary"], div.stButton > button {
-    background-color: rgba(255, 255, 255, 0.08) !important; /* semi-transparent */
+    background-color: rgba(255, 255, 255, 0.08) !important;
     color: white !important;
     border: 1px solid rgba(255, 255, 255, 0.3) !important;
     backdrop-filter: blur(6px);
@@ -78,12 +78,35 @@ div.stButton > button:hover {
     background-color: transparent !important;
 }
 
-/* --- Inputs / Textareas / Selects --- */
-input, select, textarea {
+/* --- Inputs / Textareas / Selects (EXCEPT Color Picker) --- */
+input:not([type="color"]), select, textarea {
     background-color: rgba(255, 255, 255, 0.1) !important;
     color: white !important;
     border: 1px solid rgba(255, 255, 255, 0.3) !important;
     border-radius: 6px;
+}
+
+/* --- Restore Color Picker --- */
+input[type="color"] {
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    height: 2.5rem !important;
+    width: 3rem !important;
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0 !important;
+}
+
+input[type="color"]::-webkit-color-swatch {
+    border-radius: 8px !important;
+    border: 2px solid rgba(255, 255, 255, 0.6) !important;
+}
+
+input[type="color"]::-moz-color-swatch {
+    border-radius: 8px !important;
+    border: 2px solid rgba(255, 255, 255, 0.6) !important;
 }
 
 /* --- Popovers (expanded content) --- */
@@ -96,9 +119,15 @@ div[data-baseweb="popover"] {
     backdrop-filter: blur(10px) !important;
 }
 
+/* Let Color Picker content show properly */
+div[data-baseweb="popover"] [data-baseweb="color-picker"] * {
+    background: initial !important;
+    color: initial !important;
+}
+
 /* --- Top Header / Nav Bar --- */
 header[data-testid="stHeader"] {
-    background-color: rgba(30, 30, 30, 0.4) !important; /* frosted glass */
+    background-color: rgba(30, 30, 30, 0.4) !important;
     backdrop-filter: blur(10px);
     border-bottom: none !important;
     box-shadow: none !important;
@@ -111,7 +140,7 @@ header[data-testid="stHeader"] * {
 
 /* --- Buttons in the top bar --- */
 header[data-testid="stHeader"] button {
-    background-color: rgba(255, 255, 255, 0.08) !important; /* semi-transparent */
+    background-color: rgba(255, 255, 255, 0.08) !important;
     color: white !important;
     border: 1px solid rgba(255, 255, 255, 0.3) !important;
     backdrop-filter: blur(6px);
@@ -135,35 +164,16 @@ header[data-testid="stHeader"] button:hover {
     backdrop-filter: blur(10px);
 }
 
-/* Popover inner elements */
-div[data-baseweb="popover"] * {
-    background-color: transparent !important;
-    color: white !important;
-}
-
-/* Optional: Adjust popover arrow to match background */
-div[data-baseweb="popover"]::after {
-    background-color: rgba(30, 30, 30, 0.4) !important;
-}
-            
-
-
-/* Button hover effect */
-div.stButton > button:hover {
-    background-color: rgba(255, 255, 255, 0.2) !important;
-    border: 2px solid rgba(255, 255, 255, 0.7) !important;
-}
-
 /* Transparent container with borders and frosted glass */
 .task-container {
-    background-color: rgba(0, 0, 0, 0) !important; /* fully transparent */
+    background-color: rgba(0, 0, 0, 0) !important;
     color: white !important;
     border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.5); /* visible border */
+    border: 1px solid rgba(255, 255, 255, 0.5);
     padding: 15px;
     margin-top: 5px;
     margin-bottom: 10px;
-    backdrop-filter: blur(10px); /* frosted effect */
+    backdrop-filter: blur(10px);
 }
 
 /* --- Frosted Expanders --- */
@@ -176,8 +186,6 @@ div.streamlit-expanderHeader {
     transition: all 0.3s ease-in-out !important;
 }
 
-
-/* Hover / active glow for expander header */
 div.streamlit-expanderHeader:hover {
     background: rgba(255, 255, 255, 0.22) !important;
     border-color: rgba(255, 255, 255, 0.5) !important;
@@ -187,8 +195,8 @@ div.streamlit-expanderHeader:hover {
 div[data-testid="stExpander"] {
     box-shadow: none !important;
 }
-            
-/* --- Frosted Expanders --- */
+
+/* --- Custom Frosted Expanders --- */
 .frosted-expander-header {
     background: rgba(255, 255, 255, 0.08);
     backdrop-filter: blur(10px);
@@ -201,6 +209,7 @@ div[data-testid="stExpander"] {
     font-weight: 500;
     transition: all 0.3s ease-in-out;
 }
+
 .frosted-expander-header:hover {
     background: rgba(255, 255, 255, 0.18);
     border-color: rgba(255, 255, 255, 0.4);
@@ -218,8 +227,18 @@ div[data-testid="stExpander"] {
     overflow: hidden;
     transition: max-height 0.4s ease, padding 0.3s ease;
 }
+            
+
+
+input[type="color"] {
+    background: white !important;
+    border-radius: 10px;
+    padding: 2px;
+}
+
+
 .frosted-expander-content.show {
-    max-height: 1000px; /* Large enough to show full content */
+    max-height: 1000px;
     padding: 15px;
 }
 </style>

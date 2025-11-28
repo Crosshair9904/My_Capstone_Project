@@ -130,6 +130,94 @@ div.streamlit-expanderHeader:hover {
 div[data-testid="stExpander"] {
     box-shadow: none !important;
 }
+
+/* === COLOR PICKER FIX INSIDE st.dialogs ===
+   Keeps dialogs frosted/transparent but forces the BaseWeb
+   color-picker popover to render normally (no blur/filters).
+   Paste this AFTER your existing CSS rules.
+*/
+
+/* Target the popover when it appears inside any Streamlit dialog/modal */
+.stDialog div[data-baseweb="popover"],
+.stDialog div[data-baseweb="popover"] *,
+.stModal div[data-baseweb="popover"],
+.stModal div[data-baseweb="popover"] *,
+div[data-testid="stDialog"] div[data-baseweb="popover"],
+div[data-testid="stDialog"] div[data-baseweb="popover"] * {
+    /* Revert inherited visual effects that break the wheel */
+    all: revert !important;
+    filter: none !important;
+    mix-blend-mode: normal !important;
+    background: transparent !important;
+    color: initial !important;
+}
+
+/* Then explicitly style the popover container so it's readable and above the frosted dialog */
+.stDialog div[data-baseweb="popover"],
+.stModal div[data-baseweb="popover"],
+div[data-testid="stDialog"] div[data-baseweb="popover"] {
+    background: white !important;            /* white background for the picker UI */
+    border-radius: 12px !important;
+    padding: 8px !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35) !important;
+    backdrop-filter: none !important;       /* remove frosted blur for the popover */
+    z-index: 9999 !important;                /* ensure it sits above the dialog overlay */
+}
+
+/* Make sure SVG/canvas wheel and slider tracks are not filtered */
+.stDialog div[data-baseweb="popover"] svg,
+.stDialog div[data-baseweb="popover"] canvas,
+.stModal div[data-baseweb="popover"] svg,
+.stModal div[data-baseweb="popover"] canvas,
+div[data-testid="stDialog"] div[data-baseweb="popover"] svg,
+div[data-testid="stDialog"] div[data-baseweb="popover"] canvas {
+    filter: none !important;
+    mix-blend-mode: normal !important;
+    background: transparent !important;
+}
+
+/* Keep the popover controls readable (labels, values) */
+.stDialog div[data-baseweb="popover"] label,
+.stDialog div[data-baseweb="popover"] input,
+.stDialog div[data-baseweb="popover"] button,
+.stDialog div[data-baseweb="popover"] span,
+.stModal div[data-baseweb="popover"] label,
+.stModal div[data-baseweb="popover"] input,
+.stModal div[data-baseweb="popover"] button,
+.stModal div[data-baseweb="popover"] span,
+div[data-testid="stDialog"] div[data-baseweb="popover"] label,
+div[data-testid="stDialog"] div[data-baseweb="popover"] input,
+div[data-testid="stDialog"] div[data-baseweb="popover"] button,
+div[data-testid="stDialog"] div[data-baseweb="popover"] span {
+    color: #000 !important;   /* dark text on white popover */
+}
+
+/* Improve native color-swatch visibility (in case a native input is used) */
+.stDialog input[type="color"],
+.stModal input[type="color"],
+div[data-testid="stDialog"] input[type="color"] {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    background: white !important;
+    border-radius: 8px !important;
+    height: 2.25rem !important;
+    width: 3rem !important;
+    border: 1px solid rgba(0,0,0,0.12) !important;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02) !important;
+}
+
+/* Webkit swatch details */
+.stDialog input[type="color"]::-webkit-color-swatch,
+.stModal input[type="color"]::-webkit-color-swatch,
+div[data-testid="stDialog"] input[type="color"]::-webkit-color-swatch {
+    border-radius: 6px !important;
+    border: 1px solid rgba(0,0,0,0.12) !important;
+}
+
+/* Finally, ensure the dialog itself keeps its frosted look (unchanged) */
+.stDialog, .stModal, div[data-testid="stDialog"] {
+    /* preserve whatever frosted rules you already have - this block does not change them */
+}
 </style>
 """, unsafe_allow_html=True)
 

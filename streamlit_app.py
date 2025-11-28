@@ -6,8 +6,6 @@ import time
 from datetime import date, timedelta, datetime
 import openai
 import google.generativeai as genai 
-from st_supabase_connection import SupabaseConnection
-from supabase import create_client, Client
 import supabase
 import json
 from docx import Document
@@ -16,18 +14,11 @@ import os
 import base64
 from pathlib import Path
 
-from services.test_home import get_user_session
+from st_supabase_connection import SupabaseConnection
+from supabase import create_client, Client
 
 
-url = st.secrets['connections']['SUPABASE_URL']
-key = st.secrets['connections']['SUPABASE_KEY']
 
-
-# supabase = init_connection()
-
-# # Initialize the Supabase connection
-# conn = st.connection("supabase", type=SupabaseConnection)
-supabase: Client = create_client(url, key)
 
 
 # Setting the Background
@@ -150,7 +141,6 @@ div[data-testid="stExpander"] {
 
 
 #TO RUN APP: RUN THE CODE AND TAKE THE PATH AND USE THE RUN COMMAND IN TERMINAL
-
 # Setting The User Session
 def get_user_data(email):
     # Fetch user data from Supabase or initialize if not found
@@ -192,52 +182,16 @@ def get_user_data(email):
         return json.loads(raw_data)
     return raw_data
 
+url = st.secrets['connections']['SUPABASE_URL']
+key = st.secrets['connections']['SUPABASE_KEY']
 
 
-# Initialize sectioned task list session state
-if "today_tasks" not in st.session_state:
-    st.session_state["today_tasks"] = []
+# supabase = init_connection()
 
-if "this_week_tasks" not in st.session_state:
-    st.session_state["this_week_tasks"] = []
+# # Initialize the Supabase connection
+# conn = st.connection("supabase", type=SupabaseConnection)
+supabase: Client = create_client(url, key)
 
-if "ai_to_do_list_database" not in st.session_state:
-    st.session_state["ai_to_do_list_database"] = []
-
-
-def get_week_bounds():
-    """Return today's date, start of week, and end of week (all as date objects)."""
-    today = datetime.today().date()
-    start_of_week = today - timedelta(days=today.isoweekday() - 1)  # Monday start
-    end_of_week = start_of_week + timedelta(days=6)
-    return today, start_of_week, end_of_week
-
-
-user_data = get_user_data(st.session_state['username'])
-today, start, end = get_week_bounds()
-
-def parse(d):
-        return datetime.fromisoformat(d).date()  # all tasks stored as strings
-todays_tasks = [
-        task["name"]
-        for task in user_data['tasks']
-        if parse(task["due_date"]) == today
-    ]
-
-this_weeks_tasks = [
-    task["name"]
-    for task in user_data['tasks']
-    if start <= parse(task["due_date"]) <= end and parse(task["due_date"]) != today
-]
-
-
-# Function to Update Supabase Database 
-
-def update_user_data(email, new_data):
-    """Update user's data field in Supabase."""
-    supabase.table("user_data").update({
-        "data": new_data
-    }).eq("email", email).execute()
 
 
 
@@ -270,37 +224,13 @@ def login(username):
     st.session_state["username"] = st.session_state.user_email
     st.session_state["login_time"] = datetime.now()  # Set login time
     # Initialize user-specific session state
-    get_user_session(username)
+    get_user_data(username)
 
 def main_app(user_email):
 
     login(user_email) # used to start the session state individually for each user's email
 
-    # Fetch user data
-    user_data = get_user_data(user_email)
-
-    # Get the data from database to edit within application
-    courses = user_data.get("courses_list", [])
-    colors = user_data.get("courses_colors", [])
-    difficulty_ranking = user_data.get("difficulty_ranking", [])
-    tasks = user_data.get("tasks", [])
-    completed_tasks = user_data.get("complete_tasks", [])
-    written_notes = user_data.get("written_notes", [])
-    uploaded_file = user_data.get("uploaded_file", [])
-    the_ai_history = user_data.get("ai_history", [])
-    ai_quiz_length = user_data.get("ai_quiz_length", [])
-    ai_summary_length = user_data.get("ai_summary_length", [])
-    ai_assistant_response_length = user_data.get("ai_assistant_response_length", [])
-
-
-    if "ai_quiz" not in st.session_state:
-            st.session_state["ai_quiz"]  = []
-    if "ai_data_stale" not in st.session_state:
-            st.session_state["ai_data_stale"] = True
-    if "ai_data_stale_priority" not in st.session_state:
-            st.session_state["ai_data_stale_priority"] = True
-    if "ai_priority" not in st.session_state:
-        st.session_state['ai_priority'] = "To Be Determined"
+    user_data = get_user_data(st.session_state['username'])
 
 
 
