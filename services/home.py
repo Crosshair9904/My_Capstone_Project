@@ -45,6 +45,7 @@ def background():
     st.markdown(page_element, unsafe_allow_html=True)
 background()
 
+
 # Frosted Glass Theme CSS
 st.markdown("""
 <style>
