@@ -418,58 +418,59 @@ def settings_page(email):
                 After enabling this option, the AI Assitant will remember all your interactions with it and be able to recall past discussions and use them to help with discussing new topics.
             """)
         
-        col1a, col2a, col3a = st.columns(3)
+        if doc_assistant == True:
+            col1a, col2a, col3a = st.columns(3)
 
-        with col1a:
+            with col1a:
 
-            ai_quiz_length = st.select_slider(
-            "Set AI Quiz Length",
-            ["Short", "Medium", "Long", "Complete Review"], 
-            value = user_data.get("ai_quiz_length"),
-            )
-            if ai_quiz_length != user_data.get("ai_quiz_length", "Short"):
-                user_data["ai_quiz_length"] = ai_quiz_length
-                update_user_data(email, user_data)
-            
-            st.info("""
-                This toggle sets the length of the AI generated quizes:
-                    Short: - 1 to 5 questions (Multiple Choice)    
-                    Medium: - 1 to 10 questions                
-                    Long: - 1 to 20 questions                    
-                    (2/3 Multiple Choice, 1/3 Short Answer)    
-                    Complete Review: - 1 to 25 questions             
-                    (1/2 Multiple Choice, 1/2 Short Answer)
-            """)
-        
-        with col2a:
-            ai_summary_length = st.select_slider(
-            "Set AI Summary Length",
-            ["Short", "Complete Answers", "Comprehensive Answers"], 
-            value = user_data.get("ai_summary_length"),
-            )
-            if ai_summary_length != user_data.get("ai_summary_length", "Short"):
-                user_data["ai_summary_length"] = ai_summary_length
-                update_user_data(email, user_data)
+                ai_quiz_length = st.select_slider(
+                "Set AI Quiz Length",
+                ["Short", "Medium", "Long", "Complete Review"], 
+                value = user_data.get("ai_quiz_length"),
+                )
+                if ai_quiz_length != user_data.get("ai_quiz_length", "Short"):
+                    user_data["ai_quiz_length"] = ai_quiz_length
+                    update_user_data(email, user_data)
                 
-            st.info("""
-                This toggle sets the length of the AI generated summaries. The options are self-explanatory, how long you expect it to be will be how long it is.
-                    
-            """)
-
-        with col3a:
-            ai_assistant_response_length = st.select_slider(
-            "Set AI Assistant Response Length",
-            ["Concise", "Short", "Medium", "Comprehensive"], 
-            value = user_data.get("ai_assistant_response_length"),
-            )
-            if ai_assistant_response_length != user_data.get("ai_assistant_response_length", "Medium"):
-                user_data["ai_assistant_response_length"] = ai_assistant_response_length
-                update_user_data(email, user_data)
+                st.info("""
+                    This toggle sets the length of the AI generated quizes:
+                        Short: - 1 to 5 questions (Multiple Choice)    
+                        Medium: - 1 to 10 questions                
+                        Long: - 1 to 20 questions                    
+                        (2/3 Multiple Choice, 1/3 Short Answer)    
+                        Complete Review: - 1 to 25 questions             
+                        (1/2 Multiple Choice, 1/2 Short Answer)
+                """)
             
-            st.info("""
-                This toggle sets the length of the AI Assistant Responses. The options are self-explanatory, how long you expect it to be will be how long it is.
+            with col2a:
+                ai_summary_length = st.select_slider(
+                "Set AI Summary Length",
+                ["Short", "Complete Answers", "Comprehensive Answers"], 
+                value = user_data.get("ai_summary_length"),
+                )
+                if ai_summary_length != user_data.get("ai_summary_length", "Short"):
+                    user_data["ai_summary_length"] = ai_summary_length
+                    update_user_data(email, user_data)
                     
-            """)
+                st.info("""
+                    This toggle sets the length of the AI generated summaries. The options are self-explanatory, how long you expect it to be will be how long it is.
+                        
+                """)
+
+            with col3a:
+                ai_assistant_response_length = st.select_slider(
+                "Set AI Assistant Response Length",
+                ["Concise", "Short", "Medium", "Comprehensive"], 
+                value = user_data.get("ai_assistant_response_length"),
+                )
+                if ai_assistant_response_length != user_data.get("ai_assistant_response_length", "Medium"):
+                    user_data["ai_assistant_response_length"] = ai_assistant_response_length
+                    update_user_data(email, user_data)
+                
+                st.info("""
+                    This toggle sets the length of the AI Assistant Responses. The options are self-explanatory, how long you expect it to be will be how long it is.
+                        
+                """)
 
 
 

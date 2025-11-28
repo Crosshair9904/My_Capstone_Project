@@ -260,6 +260,9 @@ def get_user_data(email):
             "ai_use_ai_priority":[],
             "ai_document_assistant":[],
             "ai_use_history":[],
+            "ai_quiz_length": ["Short"],
+            "ai_summary_length": ["Short"],
+            "ai_assistant_response_length": ["Medium"],
 
         }
 
@@ -340,6 +343,9 @@ def home_page(email):
     written_notes = user_data.get("written_notes", [])
     uploaded_file = user_data.get("uploaded_file", [])
     the_ai_history = user_data.get("ai_history", [])
+    ai_quiz_length = user_data.get("ai_quiz_length", [])
+    ai_summary_length = user_data.get("ai_summary_length", [])
+    ai_assistant_response_length = user_data.get("ai_assistant_response_length", [])
 
 
     if "ai_quiz" not in st.session_state:
@@ -757,6 +763,7 @@ def home_page(email):
 
                                             Take the name of the task, the course, the users difficulty ranking of the course and the rest of the task data into consideration.
                                             You will take all that info as well as the file uploaded as notes and generate a quiz relevant to what is in the notes, as well as some questions from other internet souces relevant to the topic
+                                            Use the AI Input Guidelines to determine the type and length of the quiz.
 
 
                                             INPUTS
@@ -764,6 +771,15 @@ def home_page(email):
                                             courses: {courses}
                                             tasks: {tasks}
                                             file: {content}
+
+                                            AI Input Guidelines:
+                                            Response Length: {ai_quiz_length}
+                                            Short: - 1 to 5 questions (Multiple Choice)    
+                                            Medium: - 1 to 10 questions  (2/3 Multiple Choice, 1/3 Short Answer)                 
+                                            Long: - 1 to 20 questions  (2/3 Multiple Choice, 1/3 Short Answer)     
+                                            Complete Review: - 1 to 25 questions (1/2 Multiple Choice, 1/2 Short Answer)         
+                                            
+
 
                                             Formating requirements:
                                             Generate a 20 or so question quiz on the uploaded notes (uploaded file) and other KNOWN AND CREDIBLE SOURCES
@@ -802,10 +818,13 @@ def home_page(email):
                                             - Prioritize clarity and brevity while maintaining accuracy and completeness.
                                             - Do not copy large chunks of text from the document.
                                             - Do not add external information not found in the file.
+                                            - Use the AI Input Guidelines to determine how long and thus detailed the summary is.
                                             
                                             Output Format:
                                             - Title (if available)
                                             - Brief overview (1-5 sentences)
+
+                                            Use AI Input Guidelines at this point to determine how long and how much detail to include. Still use the following 3 guildlines as a maximum output gridline.
                                             - Bullet-point summary of key points (5-12 items max)
                                             - Include sections/quotation of the document where the summary points were taken from
                                             - [Optional] Definitions or explanations of complex terms, if needed for clarity
@@ -825,6 +844,9 @@ def home_page(email):
                                             courses: {courses}
                                             tasks: {tasks}
                                             file: {content}
+
+                                            AI Input Guidelines:
+                                            Response length: {ai_summary_length}
                                             Begin your summary below:
                                             
 
@@ -896,6 +918,7 @@ def home_page(email):
                                 Your main goals:
                                 - Explain complex topics in simple, easy-to-understand language
                                 - Provide summaries, examples, and memory aids (like mnemonics)
+                                - Use the AI Input Guideline to determine the length and detail of your responses
                                 - Ask clarifying questions when a student's request is unclear
                                 - Help students build study skills, time management, and focus
                                 - Support motivation and celebrate effort, not just correct answers
@@ -914,6 +937,9 @@ def home_page(email):
                                 ai chat history: {the_ai_history}
                                 attached document: {content}
                                 user input prompt: {user_input}
+
+                                AI Input Guidelines:
+                                Response length: {ai_assistant_response_length}
                                 """
 
                                 # Process User Input 
@@ -966,22 +992,26 @@ def home_page(email):
 
                         # Mark Complete
                         if st.button("Mark As Complete", key=f"mark_complete_button_{index}"):
-                            # Make sure we have a place to store completed tasks
+
+                            # Ensure complete_tasks list exists
                             user_data.setdefault("complete_tasks", [])
 
-                            # Move this specific task to completed
+                            # Remove task from active list
                             completed_task = user_data["tasks"].pop(index)
+
+                            # Update fields
                             completed_task["status"] = "Complete"
+                            completed_task["completion_date"] = datetime.utcnow().date().isoformat()
+
+                            # Add to completed tasks list
                             user_data["complete_tasks"].append(completed_task)
 
-                            # Update database
+                            # Save to DB
                             update_user_data(email, user_data)
 
-                            # Mark AI data as stale so priorities refresh properly
+                            # Invalidate AI caches
                             st.session_state["ai_data_stale"] = True
                             st.session_state["ai_data_stale_priority"] = True
-
-                            # Force page refresh after the move to avoid iterator conflicts
 
                         # Delete Task
                         if st.button(f"Delete Task {index + 1}", key=f"delete_{index}"):
@@ -1002,6 +1032,14 @@ def home_page(email):
 
     # Display the Completed Tasks
     def display_completed_tasks():
+
+        # Ensure older completed tasks don't break the app
+        for task in user_data.get("complete_tasks", []):
+            if "completion_date" not in task:
+                # Fallback to old due_date if it exists
+                task["completion_date"] = task.get("due_date", datetime.today().date().isoformat())
+
+
         with st.container(border=True):
             col1, col2 = st.columns([2, 1])
             with col1:
@@ -1035,7 +1073,11 @@ def home_page(email):
                                     key=f"completed_course_{index}",
                                 )
                             with col2:
-                                task["due_date"] = st.date_input("Date Completed", value=task['due_date'], key=f"completed_date_{index}").isoformat()
+                                task["completion_date"] = st.date_input(
+                                    "Date Completed",
+                                    value=datetime.fromisoformat(task.get("completion_date")),
+                                    key=f"completed_date_{index}"
+                                ).isoformat()
                             # with col2:
                             #     task["status"] = st.select_slider(
                             #         "Status",
@@ -1080,7 +1122,11 @@ def home_page(email):
                                         key=f"completed_course_{index}",
                                     )
                                 with col2:
-                                    task["due_date"] = st.date_input("Date Completed", value=datetime.today().date(), key=f"completed_date_{index}").isoformat()
+                                    task["completion_date"] = st.date_input(
+                                        "Date Completed",
+                                        value=datetime.fromisoformat(task.get("completion_date")),
+                                        key=f"completed_date_{index}"
+                                    ).isoformat()
                                 # with col2:
                                 #     task["status"] = st.select_slider(
                                 #         "Status",
@@ -1125,7 +1171,11 @@ def home_page(email):
                                     key=f"completed_course_{index}",
                                 )
                             with col2:
-                                task["due_date"] = st.date_input("Date Completed", value=task['due_date'], key=f"completed_date_{index}").isoformat()
+                                task["completion_date"] = st.date_input(
+                                    "Date Completed",
+                                    value=datetime.fromisoformat(task.get("completion_date")),
+                                    key=f"completed_date_{index}"
+                                ).isoformat()
                             # with col2:
                             #     task["status"] = st.select_slider(
                             #         "Status",
@@ -1170,7 +1220,11 @@ def home_page(email):
                                         key=f"completed_course_{index}",
                                     )
                                 with col2:
-                                    task["due_date"] = st.date_input("Date Completed", value=datetime.today().date(), key=f"completed_date_{index}").isoformat()
+                                    task["completion_date"] = st.date_input(
+                                    "Date Completed",
+                                    value=datetime.fromisoformat(task.get("completion_date")),
+                                    key=f"completed_date_{index}"
+                                ).isoformat()
                                 # with col2:
                                 #     task["status"] = st.select_slider(
                                 #         "Status",

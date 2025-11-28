@@ -1,8 +1,34 @@
 import streamlit as st
-import streamlit_authenticator as stauth  
-from datetime import datetime, timedelta
+import random
+from streamlit_calendar import calendar
+import uuid
+import time
+from datetime import date, timedelta, datetime
+import openai
+import google.generativeai as genai 
 from st_supabase_connection import SupabaseConnection
 from supabase import create_client, Client
+import supabase
+import json
+from docx import Document
+import io
+import os
+import base64
+from pathlib import Path
+
+from services.test_home import get_user_session
+
+
+url = st.secrets['connections']['SUPABASE_URL']
+key = st.secrets['connections']['SUPABASE_KEY']
+
+
+# supabase = init_connection()
+
+# # Initialize the Supabase connection
+# conn = st.connection("supabase", type=SupabaseConnection)
+supabase: Client = create_client(url, key)
+
 
 # Setting the Background
 def background():
@@ -125,34 +151,95 @@ div[data-testid="stExpander"] {
 
 #TO RUN APP: RUN THE CODE AND TAKE THE PATH AND USE THE RUN COMMAND IN TERMINAL
 
-def get_user_session(username):
-    # Get / initialize session state for a specific user
-    if "user_sessions" not in st.session_state:
-        st.session_state["user_sessions"] = {}
+# Setting The User Session
+def get_user_data(email):
+    # Fetch user data from Supabase or initialize if not found
+    response = supabase.table("user_data").select("data").eq("email", email).execute()
+    data = response.data
 
-    if username not in st.session_state["user_sessions"]:
-        # Initialize user-specific session state
-        st.session_state["user_sessions"][username] = {
+    if not data:
+        # User doesn't exist yet, initialize
+        default_data = {
             "courses_list": [],
             "courses_colors": [],
             "difficulty_ranking": [],
             "tasks": [],
             "complete_tasks": [],
-            "today_tasks": [],
-            "this_week_tasks": [],
+            "written_notes":[ ],
+            "uploaded_file":[],
+            "ai_history":[],
+            "ai_use_task_ordering":[],
+            "ai_use_ai_priority":[],
+            "ai_document_assistant":[],
+            "ai_use_history":[],
+            "ai_quiz_length": ["Short"],
+            "ai_summary_length": ["Short"],
+            "ai_assistant_response_length": ["Medium"],
+
         }
 
-    return st.session_state["user_sessions"][username]
+        supabase.table("user_data").insert({
+            "email": email,
+            "data": default_data
+        }).execute()
 
-url = st.secrets['connections']['SUPABASE_URL']
-key = st.secrets['connections']['SUPABASE_KEY']
+        return default_data
+
+    # Ensures that the data coming to the app is a string and what goes to the database is json compatible 
+
+    raw_data = data[0]["data"]
+    if isinstance(raw_data, str):
+        return json.loads(raw_data)
+    return raw_data
 
 
-# supabase = init_connection()
 
-# # Initialize the Supabase connection
-# conn = st.connection("supabase", type=SupabaseConnection)
-supabase: Client = create_client(url, key)
+# Initialize sectioned task list session state
+if "today_tasks" not in st.session_state:
+    st.session_state["today_tasks"] = []
+
+if "this_week_tasks" not in st.session_state:
+    st.session_state["this_week_tasks"] = []
+
+if "ai_to_do_list_database" not in st.session_state:
+    st.session_state["ai_to_do_list_database"] = []
+
+
+def get_week_bounds():
+    """Return today's date, start of week, and end of week (all as date objects)."""
+    today = datetime.today().date()
+    start_of_week = today - timedelta(days=today.isoweekday() - 1)  # Monday start
+    end_of_week = start_of_week + timedelta(days=6)
+    return today, start_of_week, end_of_week
+
+
+user_data = get_user_data(st.session_state['username'])
+today, start, end = get_week_bounds()
+
+def parse(d):
+        return datetime.fromisoformat(d).date()  # all tasks stored as strings
+todays_tasks = [
+        task["name"]
+        for task in user_data['tasks']
+        if parse(task["due_date"]) == today
+    ]
+
+this_weeks_tasks = [
+    task["name"]
+    for task in user_data['tasks']
+    if start <= parse(task["due_date"]) <= end and parse(task["due_date"]) != today
+]
+
+
+# Function to Update Supabase Database 
+
+def update_user_data(email, new_data):
+    """Update user's data field in Supabase."""
+    supabase.table("user_data").update({
+        "data": new_data
+    }).eq("email", email).execute()
+
+
 
 def sign_up(email, password):
     try:
@@ -188,6 +275,34 @@ def login(username):
 def main_app(user_email):
 
     login(user_email) # used to start the session state individually for each user's email
+
+    # Fetch user data
+    user_data = get_user_data(user_email)
+
+    # Get the data from database to edit within application
+    courses = user_data.get("courses_list", [])
+    colors = user_data.get("courses_colors", [])
+    difficulty_ranking = user_data.get("difficulty_ranking", [])
+    tasks = user_data.get("tasks", [])
+    completed_tasks = user_data.get("complete_tasks", [])
+    written_notes = user_data.get("written_notes", [])
+    uploaded_file = user_data.get("uploaded_file", [])
+    the_ai_history = user_data.get("ai_history", [])
+    ai_quiz_length = user_data.get("ai_quiz_length", [])
+    ai_summary_length = user_data.get("ai_summary_length", [])
+    ai_assistant_response_length = user_data.get("ai_assistant_response_length", [])
+
+
+    if "ai_quiz" not in st.session_state:
+            st.session_state["ai_quiz"]  = []
+    if "ai_data_stale" not in st.session_state:
+            st.session_state["ai_data_stale"] = True
+    if "ai_data_stale_priority" not in st.session_state:
+            st.session_state["ai_data_stale_priority"] = True
+    if "ai_priority" not in st.session_state:
+        st.session_state['ai_priority'] = "To Be Determined"
+
+
 
     with st.sidebar:
 
@@ -228,7 +343,7 @@ def main_app(user_email):
                 border-radius: 5px;
                 font-weight: bold;
             ">
-                Version 1.0.2
+                Version 1.1.0
             </span>
             """,
             unsafe_allow_html=True,
@@ -236,11 +351,13 @@ def main_app(user_email):
         def show_changelog():
             with st.expander("Changelog"):
                 st.write(f"""
-Version 1.0.2 includes the following changes:
-- Fixed some major bugs
-- Improved AI priority feature accuracy 
+Version 1.1.0 includes the following improvements:
+- Added Completion Date Tracking for Completed Tasks
+- Added User-Selectable AI Response Criteria
+- Added AI Tab in Sidebar for Future Use
+- Fixed Some Issues
 
-Date Updated: 2025/11/05           
+Date Updated: 2025/11/27        
                             
                             """)
         show_changelog()
@@ -263,11 +380,15 @@ Date Updated: 2025/11/05
     icon=":material/home:",
     default=True,
     )
+
     ai = st.Page("services/ai.py", title="Ai Tools", icon=":material/network_intelligence:")
 
     #defines page groups
     account_pages = [settings]
-    services_pages = [home]
+    if user_data['ai_document_assistant']:
+        services_pages = [home, ai]
+    else:
+        services_pages = [home]
 
     page_dict = {}
     page_dict["Services"] = services_pages
