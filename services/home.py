@@ -283,7 +283,6 @@ def get_user_data(email):
             "ai_quiz_length": ["Short"],
             "ai_summary_length": ["Short"],
             "ai_assistant_response_length": ["Medium"],
-            "user_to_do_list": [],
 
         }
 
@@ -476,7 +475,62 @@ def home_page(email):
             for i, to_do in enumerate(tasks):
                 st.checkbox(to_do.strip(), key=f"the_to_do{i}")
 
-             
+    def display_subtask_list(task, task_index):
+        """Displays and manages subtasks for a specific task (ONLY for active tasks)."""
+
+        # Ensure task has a subtasks list
+        if "subtasks" not in task:
+            task["subtasks"] = []  # each subtask = {"name": ..., "done": ...}
+
+        st.markdown("#### Task To-Do List")
+
+        # ---- Display Existing Subtasks ----
+        for sub_i, subtask in enumerate(task["subtasks"]):
+
+            c1, c2, c3 = st.columns([0.1, 0.75, 0.15])
+
+            with c1:  # checkbox
+                checked = st.checkbox(
+                    "",
+                    value=subtask["done"],
+                    key=f"subtask_done_{task_index}_{sub_i}"
+                )
+                subtask["done"] = checked
+
+            with c2:  # editable text
+                subtask["name"] = st.text_input(
+                    "",
+                    value=subtask["name"],
+                    key=f"subtask_name_{task_index}_{sub_i}"
+                )
+
+            with c3:  # delete button
+                if st.button("🗑", key=f"delete_subtask_{task_index}_{sub_i}"):
+                    task["subtasks"].pop(sub_i)
+                    update_user_data(email, user_data)
+                    st.rerun()
+
+        st.write("---")
+
+        # ---- Add New Subtask (Dialog) ----
+        if st.button("Add Subtask", key=f"open_subtask_dialog_{task_index}"):
+
+            @st.dialog("Add a Subtask")
+            def add_subtask_dialog():
+                new_name = st.text_input("Subtask Name", key=f"new_subtask_input_{task_index}")
+
+                if st.button("Add", key=f"confirm_add_subtask_{task_index}"):
+                    if new_name.strip():
+                        task["subtasks"].append({"name": new_name.strip(), "done": False})
+                        update_user_data(email, user_data)
+                        st.rerun()
+                    else:
+                        st.warning("Subtask cannot be empty.")
+
+            add_subtask_dialog()
+
+        # Save changes caused by typing
+        update_user_data(email, user_data)
 
 
     def display_tasks():
@@ -491,6 +545,8 @@ def home_page(email):
                 datetime.fromisoformat(pair[1]["due_date"]).date()
             )
         )
+
+        
 
         # --- LOOP THROUGH SORTED TASKS ---
         for display_idx, (original_idx, task) in enumerate(sorted_tasks):
@@ -1023,56 +1079,17 @@ def home_page(email):
                             with col9:
                                 st.warning("Please Upload a File to Use AI Features")
 
+                
                     
 
-
-
-
-                    with colC:
-
-                    
-
-                        # Function to display the to-do list as checkboxes
-                        def display_to_do_list():
-                            st.subheader("Your To-Do List:")
-                            for i, task in enumerate(user_to_do_list):
-                                st.checkbox(task, key=f"task_{i}")
-
-
-                        # Button to open the dialog
-                        if st.button("Make a To-Do List"):
-                            @st.dialog("Add Your Tasks")
-                            def add_tasks_to_do_list():
-                                st.write("Enter your tasks below:")
-
-                                # Temporary list to hold tasks entered in the dialog
-                                temp_tasks = []
-
-                                # Input fields for tasks
-                                task_input = st.text_input("Enter a task", key="task_input")
-                                if st.button("Add Task"):
-                                    if task_input:
-                                        temp_tasks.append(task_input)
-                                        st.success(f"Task '{task_input}' added!")
-                                    else:
-                                        st.warning("Please enter a task before adding.")
-
-                                # Confirm button to finalize the list
-                                if st.button("Confirm To-Do List"):
-                                    user_to_do_list.append(temp_tasks)  # Save tasks to Supabase
-                                    st.success("To-Do List finalized and saved!")
-                                    temp_tasks.clear()
-                    
-
-                            add_tasks_to_do_list()
-
-                        # Display the to-do list as checkboxes
-                        if user_to_do_list:
-                            display_to_do_list()
+                        
                             
 
                     with colC:
 
+                        display_subtask_list(task, original_idx)
+
+                    with colB:
                         # ---- Update, Complete, Delete ----
 
                         # Update Task
