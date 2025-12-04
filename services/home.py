@@ -283,6 +283,7 @@ def get_user_data(email):
             "ai_quiz_length": ["Short"],
             "ai_summary_length": ["Short"],
             "ai_assistant_response_length": ["Medium"],
+            "user_to_do_list": [],
 
         }
 
@@ -366,6 +367,7 @@ def home_page(email):
     ai_quiz_length = user_data.get("ai_quiz_length", [])
     ai_summary_length = user_data.get("ai_summary_length", [])
     ai_assistant_response_length = user_data.get("ai_assistant_response_length", [])
+    user_to_do_list = user_data.get("user_to_do_list", [])
 
 
     if "ai_quiz" not in st.session_state:
@@ -446,28 +448,63 @@ def home_page(email):
 
         if not courses:
             st.warning("Please Enter Your Courses In The Setting Menu Before Continuing")
+    
+    def ai_check_list():
+        if st.button("Make To-Do List"):
+
+            # Configure the Gemini API
+            genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+            model = genai.GenerativeModel(
+                model_name="gemini-2.5-flash",
+                generation_config=genai.GenerationConfig(temperature=0.0)
+            )
+
+            prompt = ["""Output a list of 3 tasks to check off to study for a math test
+                        only include the task, not explanation, no introduction, just the 3 tasks, plain and simple
+                        
+                        
+            """]
+            
+            with st.spinner("Generating To Do List ..."):
+                response = model.generate_content(prompt)
+                ai_output = response.text.strip()  # Strip any leading/trailing whitespace
+                
+            # Split the AI output into individual tasks (assuming tasks are separated by newlines)
+            tasks = ai_output.split("\n")
+            
+            # Display each task as a checkbox
+            for i, to_do in enumerate(tasks):
+                st.checkbox(to_do.strip(), key=f"the_to_do{i}")
+
+             
 
 
     def display_tasks():
         global username
         global today
 
-        # Sort tasks: overdue first, then upcoming in chronological order
+        # --- STEP 1: SORT TASKS BUT KEEP ORIGINAL INDEXES ---
         sorted_tasks = sorted(
-            user_data["tasks"],
-            key=lambda t: (
-                datetime.fromisoformat(t["due_date"]).date() >= today,
-                datetime.fromisoformat(t["due_date"]).date()
+            list(enumerate(user_data["tasks"])),  # → [(original_index, task_dict)]
+            key=lambda pair: (
+                datetime.fromisoformat(pair[1]["due_date"]).date() >= today,
+                datetime.fromisoformat(pair[1]["due_date"]).date()
             )
         )
 
-        for index, task in enumerate(sorted_tasks):
+        # --- LOOP THROUGH SORTED TASKS ---
+        for display_idx, (original_idx, task) in enumerate(sorted_tasks):
+
+            # Create stable unique prefix for ALL session-state keys
+            key_prefix = f"task_{original_idx}"
+
             col1, col2 = st.columns([0.55, 3])
 
             with col1:
-                # Color
+                # Course color
                 color_index = user_data["courses_list"].index(task["course"])
                 color = user_data["courses_colors"][color_index]
+
                 st.markdown(
                     f"""
                     <span style="
@@ -484,118 +521,131 @@ def home_page(email):
                 )
 
             with col2:
+                # --- Expand/Collapse ---
+                exp_key = f"{key_prefix}_expander"
 
-               # Unique key for each task
-                expander_key = f"task_open_{index}"
+                if exp_key not in st.session_state:
+                    st.session_state[exp_key] = False
 
-                # Toggle button
-                if expander_key not in st.session_state:
-                    st.session_state[expander_key] = False
+                if st.button(task["name"], key=f"{key_prefix}_toggle_btn", use_container_width=True):
+                    st.session_state[exp_key] = not st.session_state[exp_key]
 
-                if st.button(task["name"], key=f"toggle_{index}", use_container_width=True):
-                    st.session_state[expander_key] = not st.session_state[expander_key]
+                # --- DETAILS ---
+                if st.session_state[exp_key]:
 
-                # Container for task content
-                if st.session_state[expander_key]:
                     st.markdown('<div class="task-container">', unsafe_allow_html=True)
 
-                    # ---- Task details go inside here ----
-                    col1, col2, col3 = st.columns(3)
+                    colA, colB, colC = st.columns(3)
 
-                    with col1:
-                        task["name"] = st.text_input("Name", value=task["name"], key=f"name_{index}")
+                    # --- Left Column ---
+                    with colA:
+                        task["name"] = st.text_input(
+                            "Name",
+                            value=task["name"],
+                            key=f"{key_prefix}_name"
+                        )
+
                         task["course"] = st.selectbox(
                             "Course",
                             user_data["courses_list"],
                             index=user_data["courses_list"].index(task["course"]),
-                            key=f"course_{index}",
+                            key=f"{key_prefix}_course"
                         )
-                        task["due_date"] = st.date_input("Due Date", value=task["due_date"], key=f"date_{index}").isoformat()
 
-                    with col2:
+                        task["due_date"] = st.date_input(
+                            "Due Date",
+                            value=datetime.fromisoformat(task["due_date"]).date(),
+                            key=f"{key_prefix}_date"
+                        ).isoformat()
+
+                    # --- Middle Column (Status & Effort) ---
+                    with colB:
                         task["status"] = st.select_slider(
                             "Status",
                             ["Not Started", "In-Progress", "Near Completion", "Complete"],
                             value=task["status"],
-                            key=f"status_{index}",
+                            key=f"{key_prefix}_status"
                         )
-                        task["effort"] = st.slider("Effort", min_value=1, max_value=5, value=task["effort"], key=f"effort_{index}")
+
+                        task["effort"] = st.slider(
+                            "Effort",
+                            min_value=1,
+                            max_value=5,
+                            value=task["effort"],
+                            key=f"{key_prefix}_effort"
+                        )
 
 
                     
 
                     # --- AI or Manual Priority System (All Recalculate, Each Displays Its Own) ---
 
-                    priority_prefix = "ai_priority_"
+                    priority_prefix = f"ai_priority_{original_idx}"
                     stale_key = "ai_data_stale_priority_all"
 
-                    # --- Handle AI-based Priority Mode ---
                     if user_data.get("ai_use_ai_priority", False):
 
-                        # Button (shown per task) — triggers all regeneration
-                        if st.button("Regenerate Task Priority", key=f"regenerate_priority_btn_{index}"):
+                        if st.button("Regenerate Task Priority", key=f"{key_prefix}_regen"):
                             st.session_state[stale_key] = True
 
-                        # Initialize state defaults
                         if stale_key not in st.session_state:
                             st.session_state[stale_key] = True
 
-                        # --- Recalculate All Task Priorities if Needed ---
                         if st.session_state[stale_key]:
-                            genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                            model = genai.GenerativeModel(
-                                model_name="gemini-2.5-flash",
-                                generation_config=genai.GenerationConfig(temperature=0.0)
-                            )
+                            # (your priority regeneration logic unchanged)
+                            try:
+                                genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+                                model = genai.GenerativeModel(
+                                    model_name="gemini-2.5-flash",
+                                    generation_config=genai.GenerationConfig(temperature=0.0)
+                                )
 
-                            # Summarize all tasks for context
-                            task_descriptions = []
-                            for i, t in enumerate(user_data["tasks"]):
-                                desc = f"{i+1}. {t['name']} (Course: {t['course']}, Difficulty: {t.get('difficulty', 'N/A')}, Due: {t['due_date']})"
-                                task_descriptions.append(desc)
-                            all_tasks_text = "\n".join(task_descriptions)
+                                task_descriptions = [
+                                    f"{i+1}. {t['name']} (Course: {t['course']}, Difficulty: {t.get('difficulty','N/A')}, Due: {t['due_date']})"
+                                    for i, t in enumerate(user_data["tasks"])
+                                ]
+                                all_tasks_text = "\n".join(task_descriptions)
 
-                            # AI prompt (batch mode)
-                            prompt = f"""
-                            You are an academic task prioritization assistant.
+                                # AI prompt (batch mode)
+                                prompt = f"""
+                                You are an academic task prioritization assistant.
 
-                            Your job is to assign a single-word **priority rating** ("High", "Medium", or "Low") to each of the following tasks.
+                                Your job is to assign a single-word **priority rating** ("High", "Medium", or "Low") to each of the following tasks.
 
-                            You must ONLY output one word per task, separated by line breaks — in the same order the tasks are listed below.
-                            Example Output:
-                            High
-                            Medium
-                            Low
-                            Medium
+                                You must ONLY output one word per task, separated by line breaks — in the same order the tasks are listed below.
+                                Example Output:
+                                High
+                                Medium
+                                Low
+                                Medium
 
-                            Rules:
-                            1. **Due Date**
-                            - Tasks due soon (today or within 3 days) → more likely "High"
-                            - Tasks due in 4–7 days → usually "Medium"
-                            - Tasks due in more than 7 days → likely "Low"
+                                Rules:
+                                1. **Due Date**
+                                - Tasks due soon (today or within 3 days) → more likely "High"
+                                - Tasks due in 4–7 days → usually "Medium"
+                                - Tasks due in more than 7 days → likely "Low"
 
-                            2. **Course Difficulty**
-                            - Harder courses increase the likelihood of "High" or "Medium".
-                            - Easier courses lower the likelihood of "High".
+                                2. **Course Difficulty**
+                                - Harder courses increase the likelihood of "High" or "Medium".
+                                - Easier courses lower the likelihood of "High".
 
-                            3. **Task Name**
-                            - If the name includes words like "exam", "test", "quiz", "project", or "assignment", raise the priority.
-                            - If the name includes words like "notes", "practice", "reading", or "review", lower the priority.
+                                3. **Task Name**
+                                - If the name includes words like "exam", "test", "quiz", "project", or "assignment", raise the priority.
+                                - If the name includes words like "notes", "practice", "reading", or "review", lower the priority.
 
-                            4. **Distribution Rule**
-                            - On average, only 2 out of every 4 tasks (≈ 50%) should be rated "High".
-                            - The rest must be "Medium" or "Low" according to importance.
+                                4. **Distribution Rule**
+                                - On average, only 2 out of every 4 tasks (≈ 50%) should be rated "High".
+                                - The rest must be "Medium" or "Low" according to importance.
 
-                            Today's Date: {today}
+                                Today's Date: {today}
 
-                            Tasks:
-                            {all_tasks_text}
+                                Tasks:
+                                {all_tasks_text}
 
-                            Output one line per task (High / Medium / Low only):
-                            """
+                                Output one line per task (High / Medium / Low only):
+                                """
 
-                            with st.spinner("Regenerating priorities for all tasks..."):
-                                try:
+                                with st.spinner("Regenerating priorities for all tasks..."):
                                     response = model.generate_content(prompt)
                                     ai_output_lines = [
                                         line.strip() for line in response.text.splitlines()
@@ -603,34 +653,20 @@ def home_page(email):
                                     ]
 
                                     for i, t in enumerate(user_data["tasks"]):
-                                        # Assign the generated priority
-                                        if i < len(ai_output_lines):
-                                            t["priority"] = ai_output_lines[i]
-                                        else:
-                                            t["priority"] = "Medium"
-                                        st.session_state[f"{priority_prefix}{i}"] = t["priority"]
+                                        t["priority"] = ai_output_lines[i] if i < len(ai_output_lines) else "Medium"
+                                        st.session_state[f"ai_priority_{i}"] = t["priority"]
 
-                                except Exception as e:
-                                    st.warning(f"AI failed to determine priorities: {e}")
-                                    for i, t in enumerate(user_data["tasks"]):
-                                        t["priority"] = "Medium"
-                                        st.session_state[f"{priority_prefix}{i}"] = "Medium"
+                            except Exception as e:
+                                st.warning(f"AI failed to determine priorities: {e}")
+                                for i, t in enumerate(user_data["tasks"]):
+                                    t["priority"] = "Medium"
+                                    st.session_state[f"ai_priority_{i}"] = "Medium"
 
-                            # Mark as no longer stale
                             st.session_state[stale_key] = False
 
-                        # --- Display ONLY This Task’s Priority ---
-                        task["priority"] = st.session_state.get(
-                            f"{priority_prefix}{index}",
-                            task.get("priority", "Medium")
-                        )
+                        task["priority"] = st.session_state.get(priority_prefix, task.get("priority", "Medium"))
 
-                        color_priority = {
-                            "Low": "green",
-                            "Medium": "orange",
-                            "High": "red",
-                        }.get(task["priority"], "blue")
-
+                        color_priority = {"Low": "green", "Medium": "orange", "High": "red"}.get(task["priority"], "blue")
                         st.markdown(
                             f"""
                             <span style="
@@ -647,21 +683,16 @@ def home_page(email):
                         )
 
                     else:
-                        with col2:
-                            # --- Manual Mode (Independent per task) ---
+                        # Manual Mode
+                        with colB:
                             task["priority"] = st.select_slider(
                                 "Priority",
                                 ["Low", "Medium", "High"],
                                 value=task.get("priority", "Medium"),
-                                key=f"priority_slider_{index}",
+                                key=f"{key_prefix}_manual_priority"
                             )
 
-                            color_priority = {
-                                "Low": "green",
-                                "Medium": "orange",
-                                "High": "red",
-                            }.get(task["priority"], "blue")
-
+                            color_priority = {"Low": "green", "Medium": "orange", "High": "red"}[task["priority"]]
                             st.markdown(
                                 f"""
                                 <span style="
@@ -681,7 +712,7 @@ def home_page(email):
                     task["written_notes"] = st.text_area(
                         "Notes",
                         value=task.get("written_notes", ""),
-                        key=f"notes_{index}", height= 210
+                        key=f"notes_{original_idx}", height= 210
                     )
 
                     
@@ -733,7 +764,7 @@ def home_page(email):
                     with st.expander("Upload Notes"):
                         col9, col10 = st.columns(2)
                         with col9:
-                            uploaded_file = st.file_uploader("Upload your file", type=["docx", "txt", "pdf"], key=f"uploaded_notes_{index}")
+                            uploaded_file = st.file_uploader("Upload your file", type=["docx", "txt", "pdf"], key=f"uploaded_notes_{original_idx}")
 
 
                             # Extract text content from the file
@@ -762,14 +793,14 @@ def home_page(email):
                                 task['uploaded_file_name'] = uploaded_file.name
                                 st.info(f"Uploaded: {task['uploaded_file_name']}")
 
-                                if st.button(f"Preview {task['uploaded_file_name']}", key=f"preview_{index}"):
+                                if st.button(f"Preview {task['uploaded_file_name']}", key=f"preview_{original_idx}"):
                                     show_uploaded_file_dialog(uploaded_file)
 
                                 if user_data['ai_document_assistant']:
                                     st.header("AI Tools")
                                 
                                     def generate_quiz_button():
-                                        if st.button("Generate Quiz", key=f"generate_quiz_button_{index}"):
+                                        if st.button("Generate Quiz", key=f"generate_quiz_button_{original_idx}"):
 
                                             # Configure Gemini
                                             genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
@@ -820,7 +851,7 @@ def home_page(email):
 
                                 
                                     def summary_button():
-                                        if st.button("Summarize", key=f"summarize_button_{index}"):
+                                        if st.button("Summarize", key=f"summarize_button_{original_idx}"):
                                             # Configure Gemini
                                             genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                                             model = genai.GenerativeModel(
@@ -992,56 +1023,78 @@ def home_page(email):
                             with col9:
                                 st.warning("Please Upload a File to Use AI Features")
 
+                    
+
+
+
+
+                    with colC:
+
+                    
+
+                        # Function to display the to-do list as checkboxes
+                        def display_to_do_list():
+                            st.subheader("Your To-Do List:")
+                            for i, task in enumerate(user_to_do_list):
+                                st.checkbox(task, key=f"task_{i}")
+
+
+                        # Button to open the dialog
+                        if st.button("Make a To-Do List"):
+                            @st.dialog("Add Your Tasks")
+                            def add_tasks_to_do_list():
+                                st.write("Enter your tasks below:")
+
+                                # Temporary list to hold tasks entered in the dialog
+                                temp_tasks = []
+
+                                # Input fields for tasks
+                                task_input = st.text_input("Enter a task", key="task_input")
+                                if st.button("Add Task"):
+                                    if task_input:
+                                        temp_tasks.append(task_input)
+                                        st.success(f"Task '{task_input}' added!")
+                                    else:
+                                        st.warning("Please enter a task before adding.")
+
+                                # Confirm button to finalize the list
+                                if st.button("Confirm To-Do List"):
+                                    user_to_do_list.append(temp_tasks)  # Save tasks to Supabase
+                                    st.success("To-Do List finalized and saved!")
+                                    temp_tasks.clear()
+                    
+
+                            add_tasks_to_do_list()
+
+                        # Display the to-do list as checkboxes
+                        if user_to_do_list:
+                            display_to_do_list()
                             
 
-                        
+                    with colC:
 
-                        
+                        # ---- Update, Complete, Delete ----
 
-
-                    # --- Save Updates ---
-                    with col3:
-                        # Update Task Button
-                        if st.button(f"Update Task {index + 1}", key=f"update_button_{index}"):
-                            st.session_state[f"ai_priority_stale_{index}"] = True
-                            # user_data["tasks"][index] = task
+                        # Update Task
+                        if st.button("Update Task", key=f"{key_prefix}_update"):
+                            user_data["tasks"][original_idx] = task
                             update_user_data(email, user_data)
-                            st.session_state["ai_data_stale"] = True
-                            st.session_state["ai_data_stale_priority"] = True
-                            
+                            st.success("Task updated!")
 
                         # Mark Complete
-                        if st.button("Mark As Complete", key=f"mark_complete_button_{index}"):
-
-                            # Ensure complete_tasks list exists
-                            user_data.setdefault("complete_tasks", [])
-
-                            # Remove task from active list
-                            completed_task = user_data["tasks"].pop(index)
-
-                            # Update fields
+                        if st.button("Mark As Complete", key=f"{key_prefix}_complete"):
+                            completed_task = user_data["tasks"].pop(original_idx)
                             completed_task["status"] = "Complete"
                             completed_task["completion_date"] = datetime.utcnow().date().isoformat()
-
-                            # Add to completed tasks list
-                            user_data["complete_tasks"].append(completed_task)
-
-                            # Save to DB
+                            user_data.setdefault("complete_tasks", []).append(completed_task)
                             update_user_data(email, user_data)
-
-                            # Invalidate AI caches
-                            st.session_state["ai_data_stale"] = True
-                            st.session_state["ai_data_stale_priority"] = True
+                            st.success("Marked Complete")
 
                         # Delete Task
-                        if st.button(f"Delete Task {index + 1}", key=f"delete_{index}"):
-                            if "uploaded_file_path" in task and os.path.exists(task["uploaded_file_path"]):
-                                os.remove(task["uploaded_file_path"])
-
-                            del user_data["tasks"][index]
+                        if st.button("Delete Task", key=f"{key_prefix}_delete"):
+                            user_data["tasks"].pop(original_idx)
                             update_user_data(email, user_data)
-                            st.session_state["ai_data_stale"] = True
-                            st.session_state["ai_data_stale_priority"] = True
+                            st.success("Task Deleted")
                     
                     # Close content div
                     st.markdown("</div>", unsafe_allow_html=True)
@@ -1050,233 +1103,105 @@ def home_page(email):
 
 
 
-    # Display the Completed Tasks
     def display_completed_tasks():
 
-        # Ensure older completed tasks don't break the app
+        # Ensure legacy tasks always have a completion date
         for task in user_data.get("complete_tasks", []):
             if "completion_date" not in task:
-                # Fallback to old due_date if it exists
                 task["completion_date"] = task.get("due_date", datetime.today().date().isoformat())
 
-
+        st.write("")  # spacing
         with st.container(border=True):
             col1, col2 = st.columns([2, 1])
             with col1:
-                """Display completed tasks."""
+                st.subheader("Completed Tasks")
+
             with col2:
                 if st.button("Clear List"):
-                    @st.dialog("Confirm The Clearing of Completed Tasks List")
-                    def clear_completed_tasks_list():   
-                        st.error("By Confirming, You Will Clear All Completed Tasks")
-                        if st.button("Confirm Clear List"):
+                    @st.dialog("Confirm Clearing Completed Tasks")
+                    def confirm_clear():
+                        st.error("This will permanently delete all completed tasks.")
+                        if st.button("Confirm Clear"):
                             user_data["complete_tasks"].clear()
                             update_user_data(email, user_data)
-                    clear_completed_tasks_list()
+                    confirm_clear()
 
+            completed = user_data["complete_tasks"]
+            total = len(completed)
 
+            # Determine whether we show collapsed mode or not
+            collapse_all = total > 17 and not user_data["ai_use_task_ordering"]
+            collapse_all |= total >= 8 and user_data["ai_use_task_ordering"]
 
-                
+            # ----------------------------------------------
+            # Internal rendering logic for ONE completed task
+            # ----------------------------------------------
+            def render_completed_task(task, original_index):
+                with st.expander(task["name"], expanded=False):
 
-            if user_data['ai_use_task_ordering'] == False:
+                    col1, col2 = st.columns(2)
 
-                if len(user_data['complete_tasks']) <=17:
-                    for index, task in enumerate(user_data["complete_tasks"]):
-                        with st.expander(task["name"], expanded=False):
-                            col1, col2 = st.columns(2)
-                            with col1:
-                                task["name"] = st.text_input("Name", value=task["name"], key=f"completed_name_{index}")
-                                task["course"] = st.selectbox(
-                                    "Course",
-                                    user_data["courses_list"],
-                                    index=user_data["courses_list"].index(task["course"]),
-                                    key=f"completed_course_{index}",
-                                )
-                            with col2:
-                                task["completion_date"] = st.date_input(
-                                    "Date Completed",
-                                    value=datetime.fromisoformat(task.get("completion_date")),
-                                    key=f"completed_date_{index}"
-                                ).isoformat()
-                            # with col2:
-                            #     task["status"] = st.select_slider(
-                            #         "Status",
-                            #         ["Not Started", "In-Progress", "Near Completion", "Complete"],
-                            #         value=task["status"],
-                            #         key=f"completed_status_{index}",
-                            #     )
-                            #     task["priority"] = st.select_slider(
-                            #         "Priority",
-                            #         ["Low", "Medium", "High"],
-                            #         value=task["priority"],
-                            #         key=f"completed_priority_{index}",
-                            #     )
-                            #     task["effort"] = st.slider("Effort", min_value=1, max_value=5, value=task["effort"], key=f"completed_effort_{index}")
-                            
-                            # Buttons
-                                if st.button(f"Move to Active Tasks List", key=f"re_add_{index}"):
-                                    task["status"] = "In-Progress"
-                                    user_data["tasks"].append(user_data["complete_tasks"][index])
-                                    del user_data["complete_tasks"][index]
-                                    update_user_data(email, user_data)
-                                    st.session_state["ai_data_stale"] = True
-                                    st.session_state["ai_data_stale_priority"] = True                     
-                                    break
-                            if st.button(f"Delete From Completed Tasks List", key=f"remove_from_completed_list_{index}"):
-                                del user_data["complete_tasks"][index]
-                                update_user_data(email, user_data)
-                                st.session_state["ai_data_stale"] = True
-                                st.session_state["ai_data_stale_priority"] = True
-                                break
-                else: 
-                    with st.expander("View Complete Tasks", expanded=False):
-                        for index, task in enumerate(user_data["complete_tasks"]):
-                            with st.expander(task["name"], expanded=False):
-                                col1, col2 = st.columns(2)
-                                with col1:
-                                    task["name"] = st.text_input("Name", value=task["name"], key=f"completed_name_{index}")
-                                    task["course"] = st.selectbox(
-                                        "Course",
-                                        user_data["courses_list"],
-                                        index=user_data["courses_list"].index(task["course"]),
-                                        key=f"completed_course_{index}",
-                                    )
-                                with col2:
-                                    task["completion_date"] = st.date_input(
-                                        "Date Completed",
-                                        value=datetime.fromisoformat(task.get("completion_date")),
-                                        key=f"completed_date_{index}"
-                                    ).isoformat()
-                                # with col2:
-                                #     task["status"] = st.select_slider(
-                                #         "Status",
-                                #         ["Not Started", "In-Progress", "Near Completion", "Complete"],
-                                #         value=task["status"],
-                                #         key=f"completed_status_{index}",
-                                #     )
-                                #     task["priority"] = st.select_slider(
-                                #         "Priority",
-                                #         ["Low", "Medium", "High"],
-                                #         value=task["priority"],
-                                #         key=f"completed_priority_{index}",
-                                #     )
-                                #     task["effort"] = st.slider("Effort", min_value=1, max_value=5, value=task["effort"], key=f"completed_effort_{index}")
-                                
-                                # Buttons
-                                    if st.button(f"Move to Active Tasks List", key=f"re_add_{index}"):
-                                        task["status"] = "In-Progress"
-                                        user_data["tasks"].append(user_data["complete_tasks"][index])
-                                        del user_data["complete_tasks"][index]
-                                        update_user_data(email, user_data)
-                                        st.session_state["ai_data_stale"] = True
-                                        st.session_state["ai_data_stale_priority"] = True                     
-                                        break
-                                if st.button(f"Delete From Completed Tasks List", key=f"remove_from_completed_list_{index}"):
-                                    del user_data["complete_tasks"][index]
-                                    update_user_data(email, user_data)
-                                    st.session_state["ai_data_stale"] = True
-                                    st.session_state["ai_data_stale_priority"] = True
-                                    break
+                    with col1:
+                        task["name"] = st.text_input(
+                            "Name",
+                            value=task["name"],
+                            key=f"completed_name_{original_index}"
+                        )
+
+                        task["course"] = st.selectbox(
+                            "Course",
+                            user_data["courses_list"],
+                            index=user_data["courses_list"].index(task["course"]),
+                            key=f"completed_course_{original_index}",
+                        )
+
+                    with col2:
+                        task["completion_date"] = st.date_input(
+                            "Date Completed",
+                            value=datetime.fromisoformat(task.get("completion_date")),
+                            key=f"completed_date_{original_index}",
+                        ).isoformat()
+
+                    # --------------------
+                    # Action Buttons
+                    # --------------------
+                    colA, colB = st.columns(2)
+
+                    with colA:
+                        if st.button(
+                            "Move to Active Tasks",
+                            key=f"re_add_{original_index}"
+                        ):
+                            task["status"] = "In-Progress"
+                            user_data["tasks"].append(task)
+                            del user_data["complete_tasks"][original_index]
+                            update_user_data(email, user_data)
+                            st.session_state["ai_data_stale"] = True
+                            st.session_state["ai_data_stale_priority"] = True
+                            st.rerun()
+
+                    with colB:
+                        if st.button(
+                            "Delete Completed Task",
+                            key=f"remove_completed_{original_index}"
+                        ):
+                            del user_data["complete_tasks"][original_index]
+                            update_user_data(email, user_data)
+                            st.session_state["ai_data_stale"] = True
+                            st.session_state["ai_data_stale_priority"] = True
+                            st.rerun()
+
+            # ----------------------------------------------
+            # Display Logic (collapsed vs. regular UI)
+            # ----------------------------------------------
+            if collapse_all:
+                with st.expander("View Completed Tasks", expanded=False):
+                    for idx, task in enumerate(completed):
+                        render_completed_task(task, idx)
+
             else:
-                if len(user_data['complete_tasks']) < 8:
-                    for index, task in enumerate(user_data["complete_tasks"]):
-                        with st.expander(task["name"], expanded=False):
-                            col1, col2 = st.columns(2)
-                            with col1:
-                                task["name"] = st.text_input("Name", value=task["name"], key=f"completed_name_{index}")
-                                task["course"] = st.selectbox(
-                                    "Course",
-                                    user_data["courses_list"],
-                                    index=user_data["courses_list"].index(task["course"]),
-                                    key=f"completed_course_{index}",
-                                )
-                            with col2:
-                                task["completion_date"] = st.date_input(
-                                    "Date Completed",
-                                    value=datetime.fromisoformat(task.get("completion_date")),
-                                    key=f"completed_date_{index}"
-                                ).isoformat()
-                            # with col2:
-                            #     task["status"] = st.select_slider(
-                            #         "Status",
-                            #         ["Not Started", "In-Progress", "Near Completion", "Complete"],
-                            #         value=task["status"],
-                            #         key=f"completed_status_{index}",
-                            #     )
-                            #     task["priority"] = st.select_slider(
-                            #         "Priority",
-                            #         ["Low", "Medium", "High"],
-                            #         value=task["priority"],
-                            #         key=f"completed_priority_{index}",
-                            #     )
-                            #     task["effort"] = st.slider("Effort", min_value=1, max_value=5, value=task["effort"], key=f"completed_effort_{index}")
-                            
-                            # Buttons
-                                if st.button(f"Move to Active Tasks List", key=f"re_add_{index}"):
-                                    task["status"] = "In-Progress"
-                                    user_data["tasks"].append(user_data["complete_tasks"][index])
-                                    del user_data["complete_tasks"][index]
-                                    update_user_data(email, user_data)
-                                    st.session_state["ai_data_stale"] = True
-                                    st.session_state["ai_data_stale_priority"] = True                     
-                                    break
-                            if st.button(f"Delete From Completed Tasks List", key=f"remove_from_completed_list_{index}"):
-                                del user_data["complete_tasks"][index]
-                                update_user_data(email, user_data)
-                                st.session_state["ai_data_stale"] = True
-                                st.session_state["ai_data_stale_priority"] = True
-                                break
-                else: 
-                    with st.expander("View Complete Tasks", expanded=False):
-                        for index, task in enumerate(user_data["complete_tasks"]):
-                            with st.expander(task["name"], expanded=False):
-                                col1, col2 = st.columns(2)
-                                with col1:
-                                    task["name"] = st.text_input("Name", value=task["name"], key=f"completed_name_{index}")
-                                    task["course"] = st.selectbox(
-                                        "Course",
-                                        user_data["courses_list"],
-                                        index=user_data["courses_list"].index(task["course"]),
-                                        key=f"completed_course_{index}",
-                                    )
-                                with col2:
-                                    task["completion_date"] = st.date_input(
-                                    "Date Completed",
-                                    value=datetime.fromisoformat(task.get("completion_date")),
-                                    key=f"completed_date_{index}"
-                                ).isoformat()
-                                # with col2:
-                                #     task["status"] = st.select_slider(
-                                #         "Status",
-                                #         ["Not Started", "In-Progress", "Near Completion", "Complete"],
-                                #         value=task["status"],
-                                #         key=f"completed_status_{index}",
-                                #     )
-                                #     task["priority"] = st.select_slider(
-                                #         "Priority",
-                                #         ["Low", "Medium", "High"],
-                                #         value=task["priority"],
-                                #         key=f"completed_priority_{index}",
-                                #     )
-                                #     task["effort"] = st.slider("Effort", min_value=1, max_value=5, value=task["effort"], key=f"completed_effort_{index}")
-                                
-                                # Buttons
-                                    if st.button(f"Move to Active Tasks List", key=f"re_add_{index}"):
-                                        task["status"] = "In-Progress"
-                                        user_data["tasks"].append(user_data["complete_tasks"][index])
-                                        del user_data["complete_tasks"][index]
-                                        update_user_data(email, user_data)
-                                        st.session_state["ai_data_stale"] = True
-                                        st.session_state["ai_data_stale_priority"] = True                     
-                                        break
-                                if st.button(f"Delete From Completed Tasks List", key=f"remove_from_completed_list_{index}"):
-                                    del user_data["complete_tasks"][index]
-                                    update_user_data(email, user_data)
-                                    st.session_state["ai_data_stale"] = True
-                                    st.session_state["ai_data_stale_priority"] = True
-                                    break
-            
-
+                for idx, task in enumerate(completed):
+                    render_completed_task(task, idx)
 
     # Add New Tasks
 
@@ -1844,7 +1769,6 @@ def home_page(email):
                 print(socket.gethostbyname('<your-supabase-ref>.supabase.co'))
             except Exception as e:
                 print(f"DNS resolution failed: {e}")
-
 
 
 
