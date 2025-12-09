@@ -487,25 +487,34 @@ def home_page(email):
         # ---- Display Existing Subtasks ----
         for sub_i, subtask in enumerate(task["subtasks"]):
 
-            c1, c2, c3 = st.columns([0.1, 0.75, 0.15])
+            # Tight column ratios for alignment
+            c1, c2, c3 = st.columns([0.12, 0.80, 0.18])
 
-            with c1:  # checkbox
+            # Checkbox (aligned)
+            with c1:
                 checked = st.checkbox(
-                    "",
+                    label="",
                     value=subtask["done"],
-                    key=f"subtask_done_{task_index}_{sub_i}"
+                    key=f"subtask_done_{task_index}_{sub_i}",
+                    label_visibility="collapsed"
                 )
                 subtask["done"] = checked
 
-            with c2:  # editable text
+            # Text input (aligned)
+            with c2:
                 subtask["name"] = st.text_input(
-                    "",
+                    label="",
                     value=subtask["name"],
-                    key=f"subtask_name_{task_index}_{sub_i}"
+                    key=f"subtask_name_{task_index}_{sub_i}",
+                    label_visibility="collapsed"
                 )
 
-            with c3:  # delete button
-                if st.button("🗑", key=f"delete_subtask_{task_index}_{sub_i}"):
+            # Delete button (aligned)
+            with c3:
+                if st.button(
+                    "🗑",
+                    key=f"delete_subtask_{task_index}_{sub_i}",
+                ):
                     task["subtasks"].pop(sub_i)
                     update_user_data(email, user_data)
                     st.rerun()
