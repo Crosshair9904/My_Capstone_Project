@@ -27,14 +27,14 @@ def background():
     page_element="""
     <style>
     [data-testid="stAppViewContainer"]{
-    background-image: url("https://i1.pickpik.com/photos/49/842/333/forest-fog-misty-camping-ground-preview.jpg");
+    background-image: url("https://images.unsplash.com/photo-1499678329028-101435549a4e?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D");
     background-size: cover;
     }
     [data-testid="stSidebar"] {
     background: rgba(0, 0, 0, 0);
     }
     [data-testid="stSidebar"]> div:first-child{
-    background-image: url("https://i1.pickpik.com/photos/49/842/333/forest-fog-misty-camping-ground-preview.jpg");
+    background-image: url("https://images.unsplash.com/photo-1499678329028-101435549a4e?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D");
     background-size: cover;
     }
     </style>
