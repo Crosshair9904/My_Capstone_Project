@@ -27,14 +27,14 @@ def background():
     page_element="""
     <style>
     [data-testid="stAppViewContainer"]{
-    background-image: url("https://wallpapers.com/images/featured/dark-mountain-gd3o1mx0wxezbewk.jpg");
+    background-image: url("https://i1.pickpik.com/photos/49/842/333/forest-fog-misty-camping-ground-preview.jpg");
     background-size: cover;
     }
     [data-testid="stSidebar"] {
     background: rgba(0, 0, 0, 0);
     }
     [data-testid="stSidebar"]> div:first-child{
-    background-image: url("https://wallpapers.com/images/featured/dark-mountain-gd3o1mx0wxezbewk.jpg");
+    background-image: url("https://i1.pickpik.com/photos/49/842/333/forest-fog-misty-camping-ground-preview.jpg");
     background-size: cover;
     }
     </style>
