@@ -22,24 +22,63 @@ url = st.secrets['connections']['SUPABASE_URL']
 key = st.secrets['connections']['SUPABASE_KEY']
 supabase: Client = create_client(url, key)
 
-# Setting the Background
+
+
 def background():
-    page_element="""
+    page_element = """
     <style>
-    [data-testid="stAppViewContainer"]{
-    background-image: url("https://images.unsplash.com/photo-1499678329028-101435549a4e?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D");
-    background-size: cover;
+
+    /*******************************************************
+     FULLY TRANSPARENT STREAMLIT HEADER – SAFE VERSION
+    *******************************************************/
+
+    /* Outer header container */
+    header[data-testid="stHeader"] {
+        background: rgba(0,0,0,0) !important;
+        backdrop-filter: none !important;
+        box-shadow: none !important;
     }
-    [data-testid="stSidebar"] {
-    background: rgba(0, 0, 0, 0);
+
+    /* Inner toolbar block */
+    header[data-testid="stHeader"] > div:first-child {
+        background: transparent !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
     }
-    [data-testid="stSidebar"]> div:first-child{
-    background-image: url("https://images.unsplash.com/photo-1499678329028-101435549a4e?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D");
-    background-size: cover;
+
+    /* Streamlit’s banner subcontainer */
+    header[data-testid="stHeader"] div[role="banner"] {
+        background: transparent !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
     }
+
+    /* All nested elements must not re-apply tint */
+    header[data-testid="stHeader"] * {
+        background: transparent !important;
+    }
+
+
+    /*******************************************************
+     NORMAL BACKGROUND BEHIND ENTIRE APP
+    *******************************************************/
+    [data-testid="stApp"] {
+        background-image: url("https://cdn.wallpapersafari.com/58/75/Ut1h5g.jpg");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+
+    [data-testid="stAppViewContainer"] {
+        background: transparent !important;
+    }
+
+    [data-testid="stSidebar"],
+    [data-testid="stSidebar"] > div:first-child {
+        background: transparent !important;
+    }
+
     </style>
-
-
     """
 
     st.markdown(page_element, unsafe_allow_html=True)
@@ -177,71 +216,8 @@ header[data-testid="stHeader"] button:hover {
     backdrop-filter: blur(10px);
 }
 
-/* --- Frosted Expanders --- */
-div.streamlit-expanderHeader {
-    background: rgba(255, 255, 255, 0.12) !important;
-    backdrop-filter: blur(10px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.25) !important;
-    border-radius: 10px !important;
-    color: white !important;
-    transition: all 0.3s ease-in-out !important;
-}
-
-div.streamlit-expanderHeader:hover {
-    background: rgba(255, 255, 255, 0.22) !important;
-    border-color: rgba(255, 255, 255, 0.5) !important;
-}
-
-/* Remove Streamlit default shadows */
-div[data-testid="stExpander"] {
-    box-shadow: none !important;
-}
-
-/* --- Custom Frosted Expanders --- */
-.frosted-expander-header {
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    border-radius: 10px;
-    padding: 12px 16px;
-    margin-top: 10px;
-    color: white;
-    cursor: pointer;
-    font-weight: 500;
-    transition: all 0.3s ease-in-out;
-}
-
-.frosted-expander-header:hover {
-    background: rgba(255, 255, 255, 0.18);
-    border-color: rgba(255, 255, 255, 0.4);
-}
-
-.frosted-expander-content {
-    background: rgba(255, 255, 255, 0.06);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-top: none;
-    border-radius: 0 0 10px 10px;
-    padding: 0 15px;
-    color: white;
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.4s ease, padding 0.3s ease;
-}
             
 
-
-input[type="color"] {
-    background: white !important;
-    border-radius: 10px;
-    padding: 2px;
-}
-
-
-.frosted-expander-content.show {
-    max-height: 1000px;
-    padding: 15px;
-}
 </style>
 
 <script>
@@ -615,13 +591,15 @@ def home_page(email):
                     if exp_key not in st.session_state:
                         st.session_state[exp_key] = False
 
-                    if st.button(task["name"], key=f"{key_prefix}_toggle_btn", use_container_width=True):
-                        st.session_state[exp_key] = not st.session_state[exp_key]
+                    # if st.button(task["name"], key=f"{key_prefix}_toggle_btn", use_container_width=True):
+                    #     st.session_state[exp_key] = not st.session_state[exp_key]
 
                     # --- DETAILS ---
-                    if st.session_state[exp_key]:
+                    # if st.session_state[exp_key]:
 
-                        st.markdown('<div class="task-container">', unsafe_allow_html=True)
+                    #     st.markdown('<div class="task-container">', unsafe_allow_html=True)
+                    
+                    with st.expander(task["name"],):
 
                         colA, colB, colC = st.columns(3)
 
