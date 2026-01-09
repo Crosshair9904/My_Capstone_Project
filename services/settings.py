@@ -17,24 +17,61 @@ key = st.secrets['connections']['SUPABASE_KEY']
 supabase: Client = create_client(url, key)
 
 
-# Setting the Background
 def background():
-    page_element="""
+    page_element = """
     <style>
-    [data-testid="stAppViewContainer"]{
-    background-image: url("https://wallpapers.com/images/featured/dark-mountain-gd3o1mx0wxezbewk.jpg");
-    background-size: cover;
+
+    /*******************************************************
+     FULLY TRANSPARENT STREAMLIT HEADER – SAFE VERSION
+    *******************************************************/
+
+    /* Outer header container */
+    header[data-testid="stHeader"] {
+        background: rgba(0,0,0,0) !important;
+        backdrop-filter: none !important;
+        box-shadow: none !important;
     }
-    [data-testid="stSidebar"] {
-    background: rgba(0, 0, 0, 0);
+
+    /* Inner toolbar block */
+    header[data-testid="stHeader"] > div:first-child {
+        background: transparent !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
     }
-    [data-testid="stSidebar"]> div:first-child{
-    background-image: url("https://wallpapers.com/images/featured/dark-mountain-gd3o1mx0wxezbewk.jpg");
-    background-size: cover;
+
+    /* Streamlit’s banner subcontainer */
+    header[data-testid="stHeader"] div[role="banner"] {
+        background: transparent !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
     }
+
+    /* All nested elements must not re-apply tint */
+    header[data-testid="stHeader"] * {
+        background: transparent !important;
+    }
+
+
+    /*******************************************************
+     NORMAL BACKGROUND BEHIND ENTIRE APP
+    *******************************************************/
+    [data-testid="stApp"] {
+        background-image: url("https://cdn.wallpapersafari.com/58/75/Ut1h5g.jpg");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+
+    [data-testid="stAppViewContainer"] {
+        background: transparent !important;
+    }
+
+    [data-testid="stSidebar"],
+    [data-testid="stSidebar"] > div:first-child {
+        background: transparent !important;
+    }
+
     </style>
-
-
     """
 
     st.markdown(page_element, unsafe_allow_html=True)

@@ -28,9 +28,6 @@ def background():
     page_element = """
     <style>
 
-    /*******************************************************
-     FULLY TRANSPARENT STREAMLIT HEADER – SAFE VERSION
-    *******************************************************/
 
     /* Outer header container */
     header[data-testid="stHeader"] {
@@ -59,9 +56,7 @@ def background():
     }
 
 
-    /*******************************************************
-     NORMAL BACKGROUND BEHIND ENTIRE APP
-    *******************************************************/
+    
     [data-testid="stApp"] {
         background-image: url("https://cdn.wallpapersafari.com/58/75/Ut1h5g.jpg");
         background-size: cover;
@@ -518,31 +513,62 @@ def home_page(email):
         update_user_data(email, user_data)
 
 
+
+
+    if "task_to_complete" not in st.session_state:
+        st.session_state.task_to_complete = None
+
+    if "task_to_delete" not in st.session_state:
+        st.session_state.task_to_delete = None
+
     def display_tasks():
         global username
         global today
 
+        # --- HANDLE TASK COMPLETION ---
+        if st.session_state.task_to_complete is not None:
+            idx = st.session_state.task_to_complete
+
+            completed_task = user_data["tasks"].pop(idx)
+            completed_task["status"] = "Complete"
+            completed_task["completion_date"] = datetime.utcnow().date().isoformat()
+
+            user_data.setdefault("complete_tasks", []).append(completed_task)
+            update_user_data(email, user_data)
+
+            st.session_state.task_to_complete = None
+            st.success("Marked Complete")
+            st.rerun()
+
+
+        # --- HANDLE TASK DELETION ---
+        if st.session_state.task_to_delete is not None:
+            idx = st.session_state.task_to_delete
+
+            user_data["tasks"].pop(idx)
+            update_user_data(email, user_data)
+
+            st.session_state.task_to_delete = None
+            st.success("Task Deleted")
+            st.rerun()
+
         # --- STEP 1: SORT TASKS BUT KEEP ORIGINAL INDEXES ---
         sorted_tasks = sorted(
-            list(enumerate(user_data["tasks"])),  # → [(original_index, task_dict)]
+            list(enumerate(user_data["tasks"])),
             key=lambda pair: (
                 datetime.fromisoformat(pair[1]["due_date"]).date() >= today,
                 datetime.fromisoformat(pair[1]["due_date"]).date()
             )
         )
 
-        
-
         # --- LOOP THROUGH SORTED TASKS ---
         for display_idx, (original_idx, task) in enumerate(sorted_tasks):
 
-            # Create stable unique prefix for ALL session-state keys
             key_prefix = f"task_{original_idx}"
 
             col1, col2 = st.columns([0.55, 3])
 
             with col1:
-                # Course color
                 color_index = user_data["courses_list"].index(task["course"])
                 color = user_data["courses_colors"][color_index]
 
@@ -560,29 +586,24 @@ def home_page(email):
                     """,
                     unsafe_allow_html=True,
                 )
-            
-            with col2:
-                col2A, col2B = st.columns([5,1])
 
-                #Mark as complete and deleted buttons
+            with col2:
+                col2A, col2B = st.columns([5, 1])
+
                 with col2B:
                     col2Ba, col2Bb = st.columns(2)
-                    with col2Ba:
-                        # Mark Complete
-                            if st.button("✅", key=f"{key_prefix}_complete", width="stretch"):
-                                completed_task = user_data["tasks"].pop(original_idx)
-                                completed_task["status"] = "Complete"
-                                completed_task["completion_date"] = datetime.utcnow().date().isoformat()
-                                user_data.setdefault("complete_tasks", []).append(completed_task)
-                                update_user_data(email, user_data)
-                                st.success("Marked Complete")
 
+                    # ✅ MARK COMPLETE (no mutation here)
+                    with col2Ba:
+                        if st.button("✅", key=f"{key_prefix}_complete", width="stretch"):
+                            st.session_state.task_to_complete = original_idx
+                            st.rerun()
+
+                    # 🗑 DELETE (no mutation here)
                     with col2Bb:
-                        # Delete Task
-                            if st.button("🗑", key=f"{key_prefix}_delete", width="stretch"):
-                                user_data["tasks"].pop(original_idx)
-                                update_user_data(email, user_data)
-                                st.success("Task Deleted")
+                        if st.button("🗑", key=f"{key_prefix}_delete", width="stretch"):
+                            st.session_state.task_to_delete = original_idx
+                            st.rerun()
 
                 with col2A:
                     # --- Expand/Collapse ---
