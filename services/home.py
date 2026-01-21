@@ -254,6 +254,8 @@ def get_user_data(email):
             "ai_quiz_length": ["Short"],
             "ai_summary_length": ["Short"],
             "ai_assistant_response_length": ["Medium"],
+            "selected_course_group": [],
+            "course_groups": [],
 
         }
 
@@ -321,6 +323,9 @@ def update_user_data(email, new_data):
 
 
 
+
+
+
 # The Actual Page
 def home_page(email):
 
@@ -341,6 +346,7 @@ def home_page(email):
     ai_summary_length = user_data.get("ai_summary_length", [])
     ai_assistant_response_length = user_data.get("ai_assistant_response_length", [])
     user_to_do_list = user_data.get("user_to_do_list", [])
+    course_groups = user_data.get("course_groups", [])
 
 
     #setting AI feautre sessions
@@ -518,7 +524,7 @@ def home_page(email):
         # Save changes caused by typing
         update_user_data(email, user_data)
 
-
+    
 
 
     if "task_to_complete" not in st.session_state:
@@ -534,15 +540,42 @@ def home_page(email):
         global username
         global today
 
+        course_groups = user_data.get("course_groups", [])
+    
+
+        group_name_to_group = {
+        (g.get("name") or f"Group {i+1}"): g
+        for i, g in enumerate(course_groups)
+        }
+
+        selected_group_name = user_data['selected_course_group']
+
+        if selected_group_name not in group_name_to_group:
+            selected_group_name = next(iter(group_name_to_group))
+            st.session_state.selected_course_group = selected_group_name
+
+        selected_group = group_name_to_group[selected_group_name]
+
+        selected_group.setdefault("courses_list", [])
+        selected_group.setdefault("courses_colors", [])
+
         # TASK COMPLETION
         if st.session_state.task_to_complete is not None:
             idx = st.session_state.task_to_complete
 
-            completed_task = user_data["tasks"].pop(idx)
+            # Pop task from active tasks
+            completed_task = selected_group["tasks"].pop(idx)
             completed_task["status"] = "Complete"
             completed_task["completion_date"] = datetime.utcnow().date().isoformat()
 
-            user_data.setdefault("complete_tasks", []).append(completed_task)
+            # Attach group metadata (important)
+            completed_task["course_group"] = st.session_state.selected_course_group
+
+            
+
+            # Ensure group-scoped completed tasks list exists
+            selected_group['completed_tasks'].append(completed_task)
+
             update_user_data(email, user_data)
 
             st.session_state.task_to_complete = None
@@ -554,21 +587,20 @@ def home_page(email):
         if st.session_state.task_to_delete is not None:
             idx = st.session_state.task_to_delete
 
-            user_data["tasks"].pop(idx)
+            selected_group['tasks'].pop(idx)
             update_user_data(email, user_data)
 
             st.session_state.task_to_delete = None
             st.success("Task Deleted")
             st.rerun()
 
-        # SORT TASKS BUT KEEP ORIGINAL INDEXES 
         sorted_tasks = sorted(
-            list(enumerate(user_data["tasks"])),
-            key=lambda pair: (
-                datetime.fromisoformat(pair[1]["due_date"]).date() >= today,
-                datetime.fromisoformat(pair[1]["due_date"]).date()
-            )
+        list(enumerate(selected_group["tasks"])),
+        key=lambda pair: (
+            datetime.fromisoformat(pair[1]["due_date"]).date() >= today,
+            datetime.fromisoformat(pair[1]["due_date"]).date()
         )
+)
 
         # LOOP THROUGH SORTED TASKS 
         for display_idx, (original_idx, task) in enumerate(sorted_tasks):
@@ -579,8 +611,13 @@ def home_page(email):
 
             # Establishes the task management interface
             with col1:
-                color_index = user_data["courses_list"].index(task["course"])
-                color = user_data["courses_colors"][color_index]
+                course_name = task.get("course")
+
+                if course_name and course_name in selected_group["courses_list"]:
+                    color_index = selected_group["courses_list"].index(course_name)
+                    color = selected_group["courses_colors"][color_index]
+                else:
+                    color = "#cccccc"  # neutral fallback
 
                 st.markdown(
                     f"""
@@ -637,8 +674,8 @@ def home_page(email):
 
                             task["course"] = st.selectbox(
                                 "Course",
-                                user_data["courses_list"],
-                                index=user_data["courses_list"].index(task["course"]),
+                                selected_group["courses_list"],
+                                index=selected_group["courses_list"].index(task["course"]),
                                 key=f"{key_prefix}_course"
                             )
 
@@ -1123,7 +1160,7 @@ def home_page(email):
 
                             # Update Task
                             if st.button("Update Task", key=f"{key_prefix}_update"):
-                                user_data["tasks"][original_idx] = task
+                                selected_group["tasks"][original_idx] = task
                                 update_user_data(email, user_data)
                                 st.success("Task updated!")
 
@@ -1138,8 +1175,27 @@ def home_page(email):
     # The Completed Tasks List
     def display_completed_tasks():
 
+        course_groups = user_data.get("course_groups", [])
+        
+
+        group_name_to_group = {
+        (g.get("name") or f"Group {i+1}"): g
+        for i, g in enumerate(course_groups)
+        }
+
+        selected_group_name = user_data['selected_course_group']
+
+        if selected_group_name not in group_name_to_group:
+            selected_group_name = next(iter(group_name_to_group))
+            st.session_state.selected_course_group = selected_group_name
+
+        selected_group = group_name_to_group[selected_group_name]
+
+        selected_group.setdefault("courses_list", [])
+        selected_group.setdefault("courses_colors", [])
+
         # Ensure legacy tasks always have a completion date
-        for task in user_data.get("complete_tasks", []):
+        for task in selected_group['completed_tasks']:
             if "completion_date" not in task:
                 task["completion_date"] = task.get("due_date", datetime.today().date().isoformat())
 
@@ -1155,11 +1211,11 @@ def home_page(email):
                     def confirm_clear():
                         st.error("This will permanently delete all completed tasks.")
                         if st.button("Confirm Clear"):
-                            user_data["complete_tasks"].clear()
+                            selected_group["completed_tasks"].clear()
                             update_user_data(email, user_data)
                     confirm_clear()
 
-            completed = user_data["complete_tasks"]
+            completed = selected_group["completed_tasks"]
             total = len(completed)
 
             # Determine whether we show collapsed mode or not
@@ -1169,7 +1225,9 @@ def home_page(email):
             
             # Internal rendering logic for one completed task
         
-            def render_completed_task(task, original_index):
+            def render_completed_task(task, original_index, selected_group):
+
+                
                 with st.expander(task["name"], expanded=False):
 
                     col1, col2 = st.columns(2)
@@ -1183,8 +1241,8 @@ def home_page(email):
 
                         task["course"] = st.selectbox(
                             "Course",
-                            user_data["courses_list"],
-                            index=user_data["courses_list"].index(task["course"]),
+                            selected_group["courses_list"],
+                            index=selected_group["courses_list"].index(task["course"]),
                             key=f"completed_course_{original_index}",
                         )
 
@@ -1206,8 +1264,8 @@ def home_page(email):
                             key=f"re_add_{original_index}"
                         ):
                             task["status"] = "In-Progress"
-                            user_data["tasks"].append(task)
-                            del user_data["complete_tasks"][original_index]
+                            selected_group["completed_tasks"].pop(original_index)
+                            selected_group["tasks"].append(task)
                             update_user_data(email, user_data)
                             st.session_state["ai_data_stale"] = True
                             st.session_state["ai_data_stale_priority"] = True
@@ -1218,7 +1276,7 @@ def home_page(email):
                             "Delete Completed Task",
                             key=f"remove_completed_{original_index}"
                         ):
-                            del user_data["complete_tasks"][original_index]
+                            selected_group["completed_tasks"].pop(original_index)
                             update_user_data(email, user_data)
                             st.session_state["ai_data_stale"] = True
                             st.session_state["ai_data_stale_priority"] = True
@@ -1228,13 +1286,31 @@ def home_page(email):
             if collapse_all:
                 with st.expander("View Completed Tasks", expanded=False):
                     for idx, task in enumerate(completed):
-                        render_completed_task(task, idx)
+                        render_completed_task(task, idx, selected_group)
 
             else:
                 for idx, task in enumerate(completed):
-                    render_completed_task(task, idx)
+                    render_completed_task(task, idx, selected_group)
 
+    #def new_display_completed_tasks():
 
+    course_groups = user_data.get("course_groups", [])
+
+    group_name_to_group = {
+    (g.get("name") or f"Group {i+1}"): g
+    for i, g in enumerate(course_groups)
+    }
+
+    selected_group_name = user_data['selected_course_group']
+
+    if selected_group_name not in group_name_to_group:
+        selected_group_name = next(iter(group_name_to_group))
+        st.session_state.selected_course_group = selected_group_name
+
+    selected_group = group_name_to_group[selected_group_name]
+
+    selected_group.setdefault("courses_list", [])
+    selected_group.setdefault("courses_colors", [])
 
 
     # Add New Tasks
@@ -1246,58 +1322,81 @@ def home_page(email):
     with col2:
         st.markdown("# Home")
 
+    if course_groups:
+        with col2:
+            st.empty()
+            st.empty()
+            st.empty()
+            st.empty()
+            st.empty()
+            if st.button("Add New Task"):
+                @st.dialog("Add New Task")
 
-    with col2:
-        st.empty()
-        st.empty()
-        st.empty()
-        st.empty()
-        st.empty()
-        if st.button("Add New Task"):
-            @st.dialog("Add New Task")
+                # Code to add new task
+                def add_new_task_dialog():
 
-            # Code to add new task
-            def add_new_task_dialog():
-                with st.form("Adding Tasks", clear_on_submit=True):
-                    new_task = {}
+                    course_groups = user_data.get("course_groups", [])
+        
 
-                    tab1, tab2, tab3 = st.tabs(["Task Details", "Additional Details", "Submit"])
+                    group_name_to_group = {
+                    (g.get("name") or f"Group {i+1}"): g
+                    for i, g in enumerate(course_groups)
+                    }
 
-                    with tab1:
-                        st.header("Task Details")
-                        new_task["name"] = st.text_input("Task Name:")
-                        new_task["course"] = st.selectbox("Course:", user_data["courses_list"])
-                        new_task["due_date"] = st.date_input("Due Date:").isoformat()
+                    selected_group_name = user_data['selected_course_group']
 
-                    with tab2:
-                        st.header("Additional Details")
-                        new_task["status"] = st.select_slider("Status:", ["Not Started", "In-Progress", "Near Completion", "Complete"])
-                        
-                        # SAFELY check for AI priority setting
-                        if not user_data.get("ai_use_ai_priority", False):
-                            new_task["priority"] = st.select_slider("Priority:", ["Low", "Medium", "High"])
+                    if selected_group_name not in group_name_to_group:
+                        selected_group_name = next(iter(group_name_to_group))
+                        st.session_state.selected_course_group = selected_group_name
 
-                        new_task["effort"] = st.slider("Effort Required:", min_value=1, max_value=5)
+                    selected_group = group_name_to_group[selected_group_name]
+
+                    selected_group.setdefault("courses_list", [])
+                    selected_group.setdefault("courses_colors", [])
 
 
-                    #submit task info to task management part
-                    with tab3:
-                        if st.form_submit_button("Submit"):
-                            if new_task and new_task not in tasks:
-                                tasks.append(new_task)
-                                user_data["tasks"] = tasks
-                                update_user_data(email, user_data)
-                                st.session_state["ai_data_stale"] = True
-                                st.session_state["ai_data_stale_priority"] = True
-                                st.success(f"Added task: {new_task['name']}")
-                                st.session_state.show_add_task_dialog = False
-                                st.rerun()
-                            elif new_task in tasks:
-                                st.warning("Task already exists.")
-                            else:
-                                st.error("Please enter a task.")
 
-            add_new_task_dialog()
+                    with st.form("Adding Tasks", clear_on_submit=True):
+                        new_task = {}
+
+                        tab1, tab2, tab3 = st.tabs(["Task Details", "Additional Details", "Submit"])
+
+                        with tab1:
+                            st.header("Task Details")
+                            new_task["name"] = st.text_input("Task Name:")
+                            new_task["course"] = st.selectbox("Course:", selected_group["courses_list"])
+                            new_task["due_date"] = st.date_input("Due Date:").isoformat()
+
+                        with tab2:
+                            st.header("Additional Details")
+                            new_task["status"] = st.select_slider("Status:", ["Not Started", "In-Progress", "Near Completion", "Complete"])
+                            
+                            # SAFELY check for AI priority setting
+                            if not user_data.get("ai_use_ai_priority", False):
+                                new_task["priority"] = st.select_slider("Priority:", ["Low", "Medium", "High"])
+
+                            new_task["effort"] = st.slider("Effort Required:", min_value=1, max_value=5)
+
+
+                        #submit task info to task management part
+                        with tab3:
+                            if st.form_submit_button("Submit"):
+                                if new_task and new_task not in selected_group['tasks']:
+                                    selected_group['tasks'].append(new_task)
+                                    update_user_data(email, user_data)
+                                    st.session_state["ai_data_stale"] = True
+                                    st.session_state["ai_data_stale_priority"] = True
+                                    st.success(f"Added task: {new_task['name']}")
+                                    st.session_state.show_add_task_dialog = False
+                                    st.rerun()
+                                elif new_task in selected_group['tasks']:
+                                    st.warning("Task already exists.")
+                                else:
+                                    st.error("Please enter a task.")
+
+                add_new_task_dialog()
+    else:
+        st.info("Create a course group in settings menu first.")
     
     
 
@@ -1310,7 +1409,7 @@ def home_page(email):
         with col1:
             # Display the list of tasks for editing
             st.subheader("Current Tasks")
-            if user_data['tasks']:
+            if selected_group['tasks']:
                 
                 display_tasks()
             else:
@@ -1331,7 +1430,7 @@ def home_page(email):
         with col1:
             # Display the list of tasks for editing
                 st.subheader("Current Tasks")
-                if user_data['tasks']:
+                if selected_group['tasks']:
                     
                     display_tasks()
                 else:
@@ -1392,7 +1491,7 @@ def home_page(email):
 
                 # Area for Complete Tasks
                 st.subheader("Completed Tasks")
-                if user_data['complete_tasks']:
+                if selected_group['completed_tasks'] and course_groups:
                     
                     display_completed_tasks()
 
@@ -1447,6 +1546,27 @@ def home_page(email):
 
 
             def add_events_to_calendar():
+                course_groups = user_data.get("course_groups", [])
+
+                group_name_to_group = {
+                (g.get("name") or f"Group {i+1}"): g
+                for i, g in enumerate(course_groups)
+                }
+
+                selected_group_name = user_data['selected_course_group']
+
+                if selected_group_name not in group_name_to_group:
+                    selected_group_name = next(iter(group_name_to_group))
+                    st.session_state.selected_course_group = selected_group_name
+
+                selected_group = group_name_to_group[selected_group_name]
+
+                selected_group.setdefault("courses_list", [])
+                selected_group.setdefault("courses_colors", [])
+
+
+
+
                 for index, task in enumerate(user_data['tasks']):
                     color_index = user_data['courses_list'].index(task['course'])
                     color = user_data['courses_colors'][color_index]
@@ -1608,7 +1728,7 @@ def home_page(email):
         with col1:
             # Area for Complete Tasks
             st.subheader("Completed Tasks")
-            if user_data['complete_tasks']:
+            if selected_group['completed_tasks'] and course_groups:
                 
                 display_completed_tasks()
             else:
@@ -1660,9 +1780,29 @@ def home_page(email):
 
 
             def add_events_to_calendar():
+                course_groups = user_data.get("course_groups", [])
+
+                group_name_to_group = {
+                (g.get("name") or f"Group {i+1}"): g
+                for i, g in enumerate(course_groups)
+                }
+
+                selected_group_name = user_data['selected_course_group']
+
+                if selected_group_name not in group_name_to_group:
+                    selected_group_name = next(iter(group_name_to_group))
+                    st.session_state.selected_course_group = selected_group_name
+
+                selected_group = group_name_to_group[selected_group_name]
+
+                selected_group.setdefault("courses_list", [])
+                selected_group.setdefault("courses_colors", [])
+
+
+
                 for index, task in enumerate(user_data['tasks']):
-                    color_index = user_data['courses_list'].index(task['course'])
-                    color = user_data['courses_colors'][color_index]
+                    color_index = selected_group['courses_list'].index(task['course'])
+                    color = selected_group['courses_colors'][color_index]
                     due_date = str(task['due_date'])
 
                     events.append(
