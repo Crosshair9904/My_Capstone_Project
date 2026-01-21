@@ -571,14 +571,13 @@ def home_page(email):
             st.success("Task Deleted")
             st.rerun()
 
-        # --- STEP 1: SORT TASKS BUT KEEP ORIGINAL INDEXES ---
         sorted_tasks = sorted(
-            list(enumerate(user_data["tasks"])),
-            key=lambda pair: (
-                datetime.fromisoformat(pair[1]["due_date"]).date() >= today,
-                datetime.fromisoformat(pair[1]["due_date"]).date()
-            )
-        )
+        list(enumerate(user_data["tasks"])),
+        key=lambda x: (
+            x[1].get("priority", 0),
+            x[1].get("due_date", "")
+                                     )
+         )
 
         # --- LOOP THROUGH SORTED TASKS ---
         for display_idx, (original_idx, task) in enumerate(sorted_tasks):
@@ -614,15 +613,13 @@ def home_page(email):
 
                     # ✅ MARK COMPLETE (no mutation here)
                     with col2Ba:
-                        if st.button("✅", key=f"{key_prefix}_complete", width="stretch"):
+                        if st.button("✅", key=f"complete_{original_idx}"):
                             st.session_state.task_to_complete = original_idx
-                            st.rerun()
 
                     # 🗑 DELETE (no mutation here)
                     with col2Bb:
-                        if st.button("🗑", key=f"{key_prefix}_delete", width="stretch"):
+                        if st.button("🗑️", key=f"delete_{original_idx}"):
                             st.session_state.task_to_delete = original_idx
-                            st.rerun()
 
                 with col2A:
                     # --- Expand/Collapse ---
