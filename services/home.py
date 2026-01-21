@@ -272,6 +272,9 @@ def get_user_data(email):
     return raw_data
 
 
+if "mutation_in_progress" not in st.session_state:
+    st.session_state.mutation_in_progress = False
+
 
 # Initialize sectioned task list session state
 if "today_tasks" not in st.session_state:
@@ -526,7 +529,12 @@ def home_page(email):
         global today
 
         # --- HANDLE TASK COMPLETION ---
-        if st.session_state.task_to_complete is not None:
+        if (
+            st.session_state.task_to_complete is not None
+            and not st.session_state.mutation_in_progress
+        ):
+            st.session_state.mutation_in_progress = True
+
             idx = st.session_state.task_to_complete
 
             completed_task = user_data["tasks"].pop(idx)
@@ -537,18 +545,29 @@ def home_page(email):
             update_user_data(email, user_data)
 
             st.session_state.task_to_complete = None
+            st.session_state.task_to_delete = None
+            st.session_state.mutation_in_progress = False
+
             st.success("Marked Complete")
             st.rerun()
 
 
         # --- HANDLE TASK DELETION ---
-        if st.session_state.task_to_delete is not None:
+        if (
+            st.session_state.task_to_delete is not None
+            and not st.session_state.mutation_in_progress
+        ):
+            st.session_state.mutation_in_progress = True
+
             idx = st.session_state.task_to_delete
 
             user_data["tasks"].pop(idx)
             update_user_data(email, user_data)
 
             st.session_state.task_to_delete = None
+            st.session_state.task_to_complete = None
+            st.session_state.mutation_in_progress = False
+
             st.success("Task Deleted")
             st.rerun()
 
