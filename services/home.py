@@ -275,6 +275,9 @@ def get_user_data(email):
 if "mutation_in_progress" not in st.session_state:
     st.session_state.mutation_in_progress = False
 
+def same_task(a, b):
+    return a == b
+
 
 # Initialize sectioned task list session state
 if "today_tasks" not in st.session_state:
@@ -532,56 +535,54 @@ def home_page(email):
         global today
 
         # --- HANDLE TASK COMPLETION ---
-        if (
-            st.session_state.task_to_complete is not None
-            and not st.session_state.mutation_in_progress
-        ):
-            st.session_state.mutation_in_progress = True
+        if st.session_state.get("task_to_complete") is not None:
 
-            idx = st.session_state.task_to_complete
+            target_task = st.session_state.task_to_complete
 
-            completed_task = user_data["tasks"].pop(idx)
-            completed_task["status"] = "Complete"
-            completed_task["completion_date"] = datetime.utcnow().date().isoformat()
+            # Always fetch fresh data
+            user_data = get_user_data(email)
 
-            user_data.setdefault("complete_tasks", []).append(completed_task)
-            update_user_data(email, user_data)
+            new_tasks = []
+            completed_task = None
+
+            for task in user_data["tasks"]:
+                if same_task(task, target_task) and completed_task is None:
+                    completed_task = task
+                else:
+                    new_tasks.append(task)
+
+            if completed_task:
+                completed_task["status"] = "Complete"
+                completed_task["completion_date"] = datetime.utcnow().date().isoformat()
+
+                user_data.setdefault("complete_tasks", []).append(completed_task)
+                user_data["tasks"] = new_tasks
+
+                update_user_data(email, user_data)
 
             st.session_state.task_to_complete = None
-            st.session_state.task_to_delete = None
-
-            st.session_state.user_data = user_data
-            st.success("Marked Complete")
-
-            # release the lock ONLY right before rerun
-            st.session_state.mutation_in_progress = False
             st.rerun()
 
 
         # --- HANDLE TASK DELETION ---
-        if (
-            st.session_state.task_to_delete is not None
-            and not st.session_state.mutation_in_progress
-        ):
-            st.session_state.mutation_in_progress = True
+        if st.session_state.get("task_to_delete") is not None:
 
-            idx = st.session_state.task_to_delete
+            target_task = st.session_state.task_to_delete
 
-            user_data["tasks"].pop(idx)
+            user_data = get_user_data(email)
+
+            user_data["tasks"] = [
+                task for task in user_data["tasks"]
+                if not same_task(task, target_task)
+            ]
+
             update_user_data(email, user_data)
 
             st.session_state.task_to_delete = None
-            st.session_state.task_to_complete = None
-
-            st.session_state.user_data = user_data
-            st.success("Task Deleted")
-
-            # IMPORTANT: release lock only at the very end
-            st.session_state.mutation_in_progress = False
             st.rerun()
 
 
-            
+
         sorted_tasks = sorted(
         list(enumerate(user_data["tasks"])),
         key=lambda x: (
@@ -624,13 +625,13 @@ def home_page(email):
 
                     # ✅ MARK COMPLETE (no mutation here)
                     with col2Ba:
-                        if st.button("✅", key=f"complete_{original_idx}"):
-                            st.session_state.task_to_complete = original_idx
+                        if st.button("✅", key=f"complete_{hash(str(task))}"):
+                            st.session_state.task_to_complete = task
 
                     # 🗑 DELETE (no mutation here)
                     with col2Bb:
-                        if st.button("🗑️", key=f"delete_{original_idx}"):
-                            st.session_state.task_to_delete = original_idx
+                        if st.button("🗑️", key=f"delete_{hash(str(task))}"):
+                            st.session_state.task_to_delete = task
 
                 with col2A:
                     # --- Expand/Collapse ---
