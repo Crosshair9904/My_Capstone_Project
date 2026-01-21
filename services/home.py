@@ -545,14 +545,16 @@ def home_page(email):
             completed_task["completion_date"] = datetime.utcnow().date().isoformat()
 
             user_data.setdefault("complete_tasks", []).append(completed_task)
-            st.session_state.user_data = user_data
             update_user_data(email, user_data)
 
             st.session_state.task_to_complete = None
             st.session_state.task_to_delete = None
-            st.session_state.mutation_in_progress = False
 
+            st.session_state.user_data = user_data
             st.success("Marked Complete")
+
+            # release the lock ONLY right before rerun
+            st.session_state.mutation_in_progress = False
             st.rerun()
 
 
@@ -566,17 +568,20 @@ def home_page(email):
             idx = st.session_state.task_to_delete
 
             user_data["tasks"].pop(idx)
-            st.session_state.user_data = user_data
             update_user_data(email, user_data)
-          
 
             st.session_state.task_to_delete = None
             st.session_state.task_to_complete = None
-            st.session_state.mutation_in_progress = False
 
+            st.session_state.user_data = user_data
             st.success("Task Deleted")
+
+            # IMPORTANT: release lock only at the very end
+            st.session_state.mutation_in_progress = False
             st.rerun()
 
+
+            
         sorted_tasks = sorted(
         list(enumerate(user_data["tasks"])),
         key=lambda x: (
