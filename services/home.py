@@ -23,7 +23,7 @@ key = st.secrets['connections']['SUPABASE_KEY']
 supabase: Client = create_client(url, key)
 
 
-
+# The Background
 def background():
     page_element = """
     <style>
@@ -283,7 +283,7 @@ if "this_week_tasks" not in st.session_state:
 if "ai_to_do_list_database" not in st.session_state:
     st.session_state["ai_to_do_list_database"] = []
 
-
+# things for sorting tasks by days and weeks
 def get_week_bounds():
     """Return today's date, start of week, and end of week (all as date objects)."""
     today = datetime.today().date()
@@ -310,8 +310,9 @@ this_weeks_tasks = [
 ]
 
 
-# Function to Update Supabase Database 
 
+
+# Function to Update Supabase Database 
 def update_user_data(email, new_data):
     """Update user's data field in Supabase."""
     supabase.table("user_data").update({
@@ -319,6 +320,8 @@ def update_user_data(email, new_data):
     }).eq("email", email).execute()
 
 
+
+# The Actual Page
 def home_page(email):
 
 
@@ -340,6 +343,7 @@ def home_page(email):
     user_to_do_list = user_data.get("user_to_do_list", [])
 
 
+    #setting AI feautre sessions
     if "ai_quiz" not in st.session_state:
             st.session_state["ai_quiz"]  = []
     if "ai_data_stale" not in st.session_state:
@@ -350,7 +354,7 @@ def home_page(email):
         st.session_state['ai_priority'] = "To Be Determined"
 
 
-    
+    # The AI To-Do List
     def ai_to_do_list():
         if user_data['ai_use_task_ordering'] == True:
             # Set default session variables
@@ -397,7 +401,7 @@ def home_page(email):
             - OUTPUT AS QUICKLY AS POSSIBLE WHILE STILL BEING AS ACCURATE AS POSSIBLE
             """
 
-            # If data was updated and AI list is stale, regenerate
+            # If data was updated and AI list is stale, regenerate (stale meaning it hasn't updated since the last action)
             if st.session_state["ai_data_stale"]:
                 with st.spinner("Generating Optimal Task Completion Order ..."):
                     response = model.generate_content(prompt)
@@ -419,6 +423,7 @@ def home_page(email):
         if not courses:
             st.warning("Please Enter Your Courses In The Setting Menu Before Continuing")
     
+    # Not used as it doesn't work
     def ai_check_list():
         if st.button("Make To-Do List"):
 
@@ -446,6 +451,7 @@ def home_page(email):
             for i, to_do in enumerate(tasks):
                 st.checkbox(to_do.strip(), key=f"the_to_do{i}")
 
+    # Subtasks
     def display_subtask_list(task, task_index):
         """Displays and manages subtasks for a specific task (ONLY for active tasks)."""
 
@@ -455,13 +461,13 @@ def home_page(email):
 
         st.markdown("#### Task To-Do List")
 
-        # ---- Display Existing Subtasks ----
+        # Display Existing Subtasks
         for sub_i, subtask in enumerate(task["subtasks"]):
 
             # Tight column ratios for alignment
             c1, c2, c3 = st.columns([0.12, 0.80, 0.18])
 
-            # Checkbox (aligned)
+            # Checkbox 
             with c1:
                 checked = st.checkbox(
                     label="",
@@ -471,7 +477,7 @@ def home_page(email):
                 )
                 subtask["done"] = checked
 
-            # Text input (aligned)
+            # Text input 
             with c2:
                 subtask["name"] = st.text_input(
                     label="",
@@ -480,7 +486,7 @@ def home_page(email):
                     label_visibility="collapsed"
                 )
 
-            # Delete button (aligned)
+            # Delete button 
             with c3:
                 if st.button(
                     "🗑",
@@ -492,7 +498,7 @@ def home_page(email):
 
         st.write("---")
 
-        # ---- Add New Subtask (Dialog) ----
+        # Add New Subtask
         if st.button("Add Subtask", key=f"open_subtask_dialog_{task_index}"):
 
             @st.dialog("Add a Subtask")
@@ -521,11 +527,14 @@ def home_page(email):
     if "task_to_delete" not in st.session_state:
         st.session_state.task_to_delete = None
 
+
+
+    # The Task Management Interface
     def display_tasks():
         global username
         global today
 
-        # --- HANDLE TASK COMPLETION ---
+        # TASK COMPLETION
         if st.session_state.task_to_complete is not None:
             idx = st.session_state.task_to_complete
 
@@ -541,7 +550,7 @@ def home_page(email):
             st.rerun()
 
 
-        # --- HANDLE TASK DELETION ---
+        # HANDLE TASK DELETION
         if st.session_state.task_to_delete is not None:
             idx = st.session_state.task_to_delete
 
@@ -552,7 +561,7 @@ def home_page(email):
             st.success("Task Deleted")
             st.rerun()
 
-        # --- STEP 1: SORT TASKS BUT KEEP ORIGINAL INDEXES ---
+        # SORT TASKS BUT KEEP ORIGINAL INDEXES 
         sorted_tasks = sorted(
             list(enumerate(user_data["tasks"])),
             key=lambda pair: (
@@ -561,13 +570,14 @@ def home_page(email):
             )
         )
 
-        # --- LOOP THROUGH SORTED TASKS ---
+        # LOOP THROUGH SORTED TASKS 
         for display_idx, (original_idx, task) in enumerate(sorted_tasks):
 
             key_prefix = f"task_{original_idx}"
 
             col1, col2 = st.columns([0.55, 3])
 
+            # Establishes the task management interface
             with col1:
                 color_index = user_data["courses_list"].index(task["course"])
                 color = user_data["courses_colors"][color_index]
@@ -593,32 +603,25 @@ def home_page(email):
                 with col2B:
                     col2Ba, col2Bb = st.columns(2)
 
-                    # ✅ MARK COMPLETE (no mutation here)
+                    # ✅ MARK COMPLETE
                     with col2Ba:
                         if st.button("✅", key=f"{key_prefix}_complete", width="stretch"):
                             st.session_state.task_to_complete = original_idx
                             st.rerun()
 
-                    # 🗑 DELETE (no mutation here)
+                    # 🗑 DELETE 
                     with col2Bb:
                         if st.button("🗑", key=f"{key_prefix}_delete", width="stretch"):
                             st.session_state.task_to_delete = original_idx
                             st.rerun()
 
                 with col2A:
-                    # --- Expand/Collapse ---
+                    # Expander showing task info
                     exp_key = f"{key_prefix}_expander"
 
                     if exp_key not in st.session_state:
                         st.session_state[exp_key] = False
 
-                    # if st.button(task["name"], key=f"{key_prefix}_toggle_btn", use_container_width=True):
-                    #     st.session_state[exp_key] = not st.session_state[exp_key]
-
-                    # --- DETAILS ---
-                    # if st.session_state[exp_key]:
-
-                    #     st.markdown('<div class="task-container">', unsafe_allow_html=True)
                     
                     with st.expander(task["name"],):
 
@@ -645,7 +648,7 @@ def home_page(email):
                                 key=f"{key_prefix}_date"
                             ).isoformat()
 
-                        # --- Middle Column (Status & Effort) ---
+                        # Middle Column (Status & Effort)
                         with colB:
                             task["status"] = st.select_slider(
                                 "Status",
@@ -665,7 +668,7 @@ def home_page(email):
 
                         
 
-                        # --- AI or Manual Priority System (All Recalculate, Each Displays Its Own) ---
+                        # AI or Manual Priority System 
 
                         priority_prefix = f"ai_priority_{original_idx}"
                         stale_key = "ai_data_stale_priority_all"
@@ -679,7 +682,7 @@ def home_page(email):
                                 st.session_state[stale_key] = True
 
                             if st.session_state[stale_key]:
-                                # (your priority regeneration logic unchanged)
+                               
                                 try:
                                     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                                     model = genai.GenerativeModel(
@@ -693,7 +696,7 @@ def home_page(email):
                                     ]
                                     all_tasks_text = "\n".join(task_descriptions)
 
-                                    # AI prompt (batch mode)
+                                    # AI prompt 
                                     prompt = f"""
                                     You are an academic task prioritization assistant.
 
@@ -770,7 +773,7 @@ def home_page(email):
                             )
 
                         else:
-                            # Manual Mode
+                            # Manual Priority
                             with colB:
                                 task["priority"] = st.select_slider(
                                     "Priority",
@@ -867,7 +870,7 @@ def home_page(email):
                                     else:
                                         return "Unsupported file type."
 
-                                # Handle file upload
+                                # file upload
                                 if uploaded_file:
                                     content = extract_text(uploaded_file)
 
@@ -1113,11 +1116,10 @@ def home_page(email):
                     
 
                         with colC:
-
+                            # calling function to display subtasks
                             display_subtask_list(task, original_idx)
 
                         with colB:
-                            # ---- Update, Complete, Delete ----
 
                             # Update Task
                             if st.button("Update Task", key=f"{key_prefix}_update"):
@@ -1133,7 +1135,7 @@ def home_page(email):
      
 
 
-
+    # The Completed Tasks List
     def display_completed_tasks():
 
         # Ensure legacy tasks always have a completion date
@@ -1164,9 +1166,9 @@ def home_page(email):
             collapse_all = total > 17 and not user_data["ai_use_task_ordering"]
             collapse_all |= total >= 8 and user_data["ai_use_task_ordering"]
 
-            # ----------------------------------------------
-            # Internal rendering logic for ONE completed task
-            # ----------------------------------------------
+            
+            # Internal rendering logic for one completed task
+        
             def render_completed_task(task, original_index):
                 with st.expander(task["name"], expanded=False):
 
@@ -1193,9 +1195,9 @@ def home_page(email):
                             key=f"completed_date_{original_index}",
                         ).isoformat()
 
-                    # --------------------
+                   
                     # Action Buttons
-                    # --------------------
+                    
                     colA, colB = st.columns(2)
 
                     with colA:
@@ -1222,9 +1224,7 @@ def home_page(email):
                             st.session_state["ai_data_stale_priority"] = True
                             st.rerun()
 
-            # ----------------------------------------------
-            # Display Logic (collapsed vs. regular UI)
-            # ----------------------------------------------
+            # Display Logic (collapsed vs regular UI)
             if collapse_all:
                 with st.expander("View Completed Tasks", expanded=False):
                     for idx, task in enumerate(completed):
@@ -1233,6 +1233,9 @@ def home_page(email):
             else:
                 for idx, task in enumerate(completed):
                     render_completed_task(task, idx)
+
+
+
 
     # Add New Tasks
 
@@ -1252,6 +1255,8 @@ def home_page(email):
         st.empty()
         if st.button("Add New Task"):
             @st.dialog("Add New Task")
+
+            # Code to add new task
             def add_new_task_dialog():
                 with st.form("Adding Tasks", clear_on_submit=True):
                     new_task = {}
@@ -1275,7 +1280,7 @@ def home_page(email):
                         new_task["effort"] = st.slider("Effort Required:", min_value=1, max_value=5)
 
 
-
+                    #submit task info to task management part
                     with tab3:
                         if st.form_submit_button("Submit"):
                             if new_task and new_task not in tasks:
@@ -1297,7 +1302,7 @@ def home_page(email):
     
 
 
-    # Show the current tasks with AI to do list next to it if enabled
+    # Show the current tasks with AI to do list next to it IF ENABLED
     if user_data['ai_use_task_ordering'] == True:
         
         col1, col2 = st.columns([3,1.1])
@@ -1319,7 +1324,7 @@ def home_page(email):
 
 
 
-    # If AI to do list not enabled
+    # If AI to do list NOT ENABLED
     else:
         col1, col2 = st.columns([3, 0.65])
         
@@ -1337,8 +1342,8 @@ def home_page(email):
         with col2: 
             with st.container(border=True):
                 #Indicator of what is due today
-                st.subheader("Tasks Due Today:")    #if st.button("Clear List of Today's Tasks"):
-                    #st.session_state.today_tasks.clear()
+                st.subheader("Tasks Due Today:")    
+                    
 
                 if todays_tasks:
                     for task_name in todays_tasks:
@@ -1358,7 +1363,7 @@ def home_page(email):
 
 
 
-    # AI to do list enabled
+    # AI to do list ENABLED
     if user_data['ai_use_task_ordering'] == True:
         col1, col2= st.columns([1, 2.5])
 
@@ -1367,8 +1372,8 @@ def home_page(email):
         #Indicator of what is due today
         with col1:
             with st.container(border=True):
-                st.subheader("Tasks Due Today:")    #if st.button("Clear List of Today's Tasks"):
-                    #st.session_state.today_tasks.clear()
+                st.subheader("Tasks Due Today:")    
+                    
 
                 if todays_tasks:
                     for task_name in todays_tasks:
@@ -1394,10 +1399,12 @@ def home_page(email):
                 else:
                     st.write("You Have Not Completed Any Tasks.")
 
-        # The calendar
+
+
+
+        # The Calendar
         with col2:
 
-            # The Calendar
 
             st.subheader("Calendar")
 
@@ -1592,7 +1599,9 @@ def home_page(email):
     
 
 
-    # AI Task ordering off
+
+
+    # AI Task ordering OFF
     else:
         col1, col2= st.columns([1, 2.5])
         
@@ -1605,7 +1614,7 @@ def home_page(email):
             else:
                 st.write("You Have Not Completed Any Tasks.")
 
-        # The calendar
+        # The Calendar
         with col2:
 
             # The Calendar
