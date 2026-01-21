@@ -343,7 +343,7 @@ def update_user_data(email, new_data):
         "data": new_data
     }).eq("email", email).execute()
 
-
+# The Actual Settings Page
 def settings_page(email):
     st.title("Settings")
 
@@ -520,7 +520,7 @@ def settings_page(email):
 
     if len(user_data["difficulty_ranking"]) >= 3:
 
-
+        # All AI Tool Settings
         st.header("AI Tools")
 
         col1, col2, col3, col4 = st.columns(4)

@@ -352,7 +352,7 @@ Date Updated: 2025/11/27
     #defines page groups
     account_pages = [settings]
     if user_data['ai_document_assistant']:
-        services_pages = [home, ai]
+        services_pages = [home]
     else:
         services_pages = [home]
 
