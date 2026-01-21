@@ -389,8 +389,8 @@ def home_page(email):
 
             INPUTS
             difficulty: {difficulty_ranking}
-            courses: {courses}
-            tasks: {tasks}
+            courses: {selected_group["courses_list"]}
+            tasks: {selected_group["tasks"]}
 
             Formating requirements:
             Make it into a list that can be displayed in streamlit application
@@ -426,7 +426,7 @@ def home_page(email):
             if st.button("Regenerate AI Task Order", key = "generate_ai_task_order_button"):
                 st.session_state["ai_data_stale"] = True
 
-        if not courses:
+        if not selected_group["courses_list"]:
             st.warning("Please Enter Your Courses In The Setting Menu Before Continuing")
     
     # Not used as it doesn't work
@@ -729,7 +729,7 @@ def home_page(email):
 
                                     task_descriptions = [
                                         f"{i+1}. {t['name']} (Course: {t['course']}, Difficulty: {t.get('difficulty','N/A')}, Due: {t['due_date']})"
-                                        for i, t in enumerate(user_data["tasks"])
+                                        for i, t in enumerate(selected_group["tasks"])
                                     ]
                                     all_tasks_text = "\n".join(task_descriptions)
 
@@ -779,13 +779,13 @@ def home_page(email):
                                             if line.strip() in ["High", "Medium", "Low"]
                                         ]
 
-                                        for i, t in enumerate(user_data["tasks"]):
+                                        for i, t in enumerate(selected_group["tasks"]):
                                             t["priority"] = ai_output_lines[i] if i < len(ai_output_lines) else "Medium"
                                             st.session_state[f"ai_priority_{i}"] = t["priority"]
 
                                 except Exception as e:
                                     st.warning(f"AI failed to determine priorities: {e}")
-                                    for i, t in enumerate(user_data["tasks"]):
+                                    for i, t in enumerate(selected_group["tasks"]):
                                         t["priority"] = "Medium"
                                         st.session_state[f"ai_priority_{i}"] = "Medium"
 
@@ -946,8 +946,8 @@ def home_page(email):
 
                                                 INPUTS
                                                 difficulty: {difficulty_ranking}
-                                                courses: {courses}
-                                                tasks: {tasks}
+                                                courses: {selected_group["courses_list"]}
+                                                tasks: {selected_group["tasks"]}
                                                 file: {content}
 
                                                 AI Input Guidelines:
@@ -1019,8 +1019,8 @@ def home_page(email):
                                                 
                                                 Inputs:
                                                 difficulty: {difficulty_ranking}
-                                                courses: {courses}
-                                                tasks: {tasks}
+                                                courses: {selected_group["courses_list"]}
+                                                tasks: {selected_group["tasks"]}
                                                 file: {content}
 
                                                 AI Input Guidelines:
@@ -1110,8 +1110,8 @@ def home_page(email):
 
                                     Inputs:
                                     difficulty: {difficulty_ranking}
-                                    courses: {courses}
-                                    tasks: {tasks}
+                                    courses: {selected_group["courses_list"]}
+                                    tasks: {selected_group["tasks"]}
                                     ai chat history: {the_ai_history}
                                     attached document: {content}
                                     user input prompt: {user_input}
