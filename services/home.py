@@ -564,7 +564,7 @@ def home_page(email):
         # --- LOOP THROUGH SORTED TASKS ---
         for display_idx, (original_idx, task) in enumerate(sorted_tasks):
 
-            key_prefix = f"task_{original_idx}"
+            #key_prefix = f"task_{original_idx}"
 
             col1, col2 = st.columns([0.55, 3])
 
@@ -595,19 +595,19 @@ def home_page(email):
 
                     # ✅ MARK COMPLETE (no mutation here)
                     with col2Ba:
-                        if st.button("✅", key=f"{key_prefix}_complete", width="stretch"):
+                        if st.button("✅", key=f"{original_idx}_complete", width="stretch"):
                             st.session_state.task_to_complete = original_idx
                             st.rerun()
 
                     # 🗑 DELETE (no mutation here)
                     with col2Bb:
-                        if st.button("🗑", key=f"{key_prefix}_delete", width="stretch"):
+                        if st.button("🗑", key=f"{original_idx}_delete", width="stretch"):
                             st.session_state.task_to_delete = original_idx
                             st.rerun()
 
                 with col2A:
                     # --- Expand/Collapse ---
-                    exp_key = f"{key_prefix}_expander"
+                    exp_key = f"{original_idx}_expander"
 
                     if exp_key not in st.session_state:
                         st.session_state[exp_key] = False
@@ -629,20 +629,20 @@ def home_page(email):
                             task["name"] = st.text_input(
                                 "Name",
                                 value=task["name"],
-                                key=f"{key_prefix}_name"
+                                key=f"{original_idx}_name"
                             )
 
                             task["course"] = st.selectbox(
                                 "Course",
                                 user_data["courses_list"],
                                 index=user_data["courses_list"].index(task["course"]),
-                                key=f"{key_prefix}_course"
+                                key=f"{original_idx}_course"
                             )
 
                             task["due_date"] = st.date_input(
                                 "Due Date",
                                 value=datetime.fromisoformat(task["due_date"]).date(),
-                                key=f"{key_prefix}_date"
+                                key=f"{original_idx}_date"
                             ).isoformat()
 
                         # --- Middle Column (Status & Effort) ---
@@ -651,7 +651,7 @@ def home_page(email):
                                 "Status",
                                 ["Not Started", "In-Progress", "Near Completion", "Complete"],
                                 value=task["status"],
-                                key=f"{key_prefix}_status"
+                                key=f"{original_idx}_status"
                             )
 
                             task["effort"] = st.slider(
@@ -659,7 +659,7 @@ def home_page(email):
                                 min_value=1,
                                 max_value=5,
                                 value=task["effort"],
-                                key=f"{key_prefix}_effort"
+                                key=f"{original_idx}_effort"
                             )
 
 
@@ -672,7 +672,7 @@ def home_page(email):
 
                         if user_data.get("ai_use_ai_priority", False):
 
-                            if st.button("Regenerate Task Priority", key=f"{key_prefix}_regen"):
+                            if st.button("Regenerate Task Priority", key=f"{original_idx}_regen"):
                                 st.session_state[stale_key] = True
 
                             if stale_key not in st.session_state:
@@ -776,7 +776,7 @@ def home_page(email):
                                     "Priority",
                                     ["Low", "Medium", "High"],
                                     value=task.get("priority", "Medium"),
-                                    key=f"{key_prefix}_manual_priority"
+                                    key=f"{original_idx}_manual_priority"
                                 )
 
                                 color_priority = {"Low": "green", "Medium": "orange", "High": "red"}[task["priority"]]
@@ -1120,7 +1120,7 @@ def home_page(email):
                             # ---- Update, Complete, Delete ----
 
                             # Update Task
-                            if st.button("Update Task", key=f"{key_prefix}_update"):
+                            if st.button("Update Task", key=f"{original_idx}_update"):
                                 user_data["tasks"][original_idx] = task
                                 update_user_data(email, user_data)
                                 st.success("Task updated!")
