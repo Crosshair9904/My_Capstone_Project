@@ -607,13 +607,13 @@ def home_page(email):
                     # ✅ MARK COMPLETE (no mutation here)
                     with col2Ba:
                         if st.button("✅", key=f"complete_{original_idx}"):
-                            st.session_state.task_to_complete = idx
+                            st.session_state.task_to_complete = original_idx
                             st.session_state.action_id = str(uuid.uuid4())
 
                     # 🗑 DELETE (no mutation here)
                     with col2Bb:
                         if st.button("🗑️", key=f"delete_{original_idx}"):
-                            st.session_state.task_to_delete = idx
+                            st.session_state.task_to_delete = original_idx
                             st.session_state.action_id = str(uuid.uuid4())
 
                 with col2A:
