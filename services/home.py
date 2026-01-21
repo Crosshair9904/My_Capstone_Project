@@ -521,12 +521,20 @@ def home_page(email):
     if "task_to_delete" not in st.session_state:
         st.session_state.task_to_delete = None
 
+    if "last_action_id" not in st.session_state:
+        st.session_state.last_action_id = None
+
     def display_tasks():
         global username
         global today
 
         # --- HANDLE TASK COMPLETION ---
-        if st.session_state.task_to_complete is not None:
+        if (
+            st.session_state.task_to_complete is not None
+            and st.session_state.action_id != st.session_state.last_action_id
+        ):
+            st.session_state.last_action_id = st.session_state.action_id
+
             idx = st.session_state.task_to_complete
 
             completed_task = user_data["tasks"].pop(idx)
@@ -542,7 +550,10 @@ def home_page(email):
 
 
         # --- HANDLE TASK DELETION ---
-        if st.session_state.task_to_delete is not None:
+        if (
+            st.session_state.task_to_delete is not None
+            and st.session_state.action_id != st.session_state.last_action_id
+        ):
             idx = st.session_state.task_to_delete
 
             user_data["tasks"].pop(idx)
@@ -564,7 +575,7 @@ def home_page(email):
         # --- LOOP THROUGH SORTED TASKS ---
         for display_idx, (original_idx, task) in enumerate(sorted_tasks):
 
-            #key_prefix = f"task_{original_idx}"
+            key_prefix = f"task_{original_idx}"
 
             col1, col2 = st.columns([0.55, 3])
 
@@ -595,19 +606,19 @@ def home_page(email):
 
                     # ✅ MARK COMPLETE (no mutation here)
                     with col2Ba:
-                        if st.button("✅", key=f"{original_idx}_complete", width="stretch"):
-                            st.session_state.task_to_complete = original_idx
-                            st.rerun()
+                        if st.button("✅", key=f"complete_{original_idx}"):
+                            st.session_state.task_to_complete = idx
+                            st.session_state.action_id = str(uuid.uuid4())
 
                     # 🗑 DELETE (no mutation here)
                     with col2Bb:
-                        if st.button("🗑", key=f"{original_idx}_delete", width="stretch"):
-                            st.session_state.task_to_delete = original_idx
-                            st.rerun()
+                        if st.button("🗑️", key=f"delete_{original_idx}"):
+                            st.session_state.task_to_delete = idx
+                            st.session_state.action_id = str(uuid.uuid4())
 
                 with col2A:
                     # --- Expand/Collapse ---
-                    exp_key = f"{original_idx}_expander"
+                    exp_key = f"{key_prefix}_expander"
 
                     if exp_key not in st.session_state:
                         st.session_state[exp_key] = False
@@ -629,20 +640,20 @@ def home_page(email):
                             task["name"] = st.text_input(
                                 "Name",
                                 value=task["name"],
-                                key=f"{original_idx}_name"
+                                key=f"{key_prefix}_name"
                             )
 
                             task["course"] = st.selectbox(
                                 "Course",
                                 user_data["courses_list"],
                                 index=user_data["courses_list"].index(task["course"]),
-                                key=f"{original_idx}_course"
+                                key=f"{key_prefix}_course"
                             )
 
                             task["due_date"] = st.date_input(
                                 "Due Date",
                                 value=datetime.fromisoformat(task["due_date"]).date(),
-                                key=f"{original_idx}_date"
+                                key=f"{key_prefix}_date"
                             ).isoformat()
 
                         # --- Middle Column (Status & Effort) ---
@@ -651,7 +662,7 @@ def home_page(email):
                                 "Status",
                                 ["Not Started", "In-Progress", "Near Completion", "Complete"],
                                 value=task["status"],
-                                key=f"{original_idx}_status"
+                                key=f"{key_prefix}_status"
                             )
 
                             task["effort"] = st.slider(
@@ -659,7 +670,7 @@ def home_page(email):
                                 min_value=1,
                                 max_value=5,
                                 value=task["effort"],
-                                key=f"{original_idx}_effort"
+                                key=f"{key_prefix}_effort"
                             )
 
 
@@ -672,7 +683,7 @@ def home_page(email):
 
                         if user_data.get("ai_use_ai_priority", False):
 
-                            if st.button("Regenerate Task Priority", key=f"{original_idx}_regen"):
+                            if st.button("Regenerate Task Priority", key=f"{key_prefix}_regen"):
                                 st.session_state[stale_key] = True
 
                             if stale_key not in st.session_state:
@@ -776,7 +787,7 @@ def home_page(email):
                                     "Priority",
                                     ["Low", "Medium", "High"],
                                     value=task.get("priority", "Medium"),
-                                    key=f"{original_idx}_manual_priority"
+                                    key=f"{key_prefix}_manual_priority"
                                 )
 
                                 color_priority = {"Low": "green", "Medium": "orange", "High": "red"}[task["priority"]]
@@ -1120,7 +1131,7 @@ def home_page(email):
                             # ---- Update, Complete, Delete ----
 
                             # Update Task
-                            if st.button("Update Task", key=f"{original_idx}_update"):
+                            if st.button("Update Task", key=f"{key_prefix}_update"):
                                 user_data["tasks"][original_idx] = task
                                 update_user_data(email, user_data)
                                 st.success("Task updated!")
