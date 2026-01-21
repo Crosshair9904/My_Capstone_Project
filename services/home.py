@@ -521,20 +521,12 @@ def home_page(email):
     if "task_to_delete" not in st.session_state:
         st.session_state.task_to_delete = None
 
-    if "last_action_id" not in st.session_state:
-        st.session_state.last_action_id = None
-
     def display_tasks():
         global username
         global today
 
         # --- HANDLE TASK COMPLETION ---
-        if (
-            st.session_state.task_to_complete is not None
-            and st.session_state.action_id != st.session_state.last_action_id
-        ):
-            st.session_state.last_action_id = st.session_state.action_id
-
+        if st.session_state.task_to_complete is not None:
             idx = st.session_state.task_to_complete
 
             completed_task = user_data["tasks"].pop(idx)
@@ -550,10 +542,7 @@ def home_page(email):
 
 
         # --- HANDLE TASK DELETION ---
-        if (
-            st.session_state.task_to_delete is not None
-            and st.session_state.action_id != st.session_state.last_action_id
-        ):
+        if st.session_state.task_to_delete is not None:
             idx = st.session_state.task_to_delete
 
             user_data["tasks"].pop(idx)
@@ -606,15 +595,15 @@ def home_page(email):
 
                     # ✅ MARK COMPLETE (no mutation here)
                     with col2Ba:
-                        if st.button("✅", key=f"complete_{original_idx}"):
+                        if st.button("✅", key=f"{key_prefix}_complete", width="stretch"):
                             st.session_state.task_to_complete = original_idx
-                            st.session_state.action_id = str(uuid.uuid4())
+                            st.rerun()
 
                     # 🗑 DELETE (no mutation here)
                     with col2Bb:
-                        if st.button("🗑️", key=f"delete_{original_idx}"):
+                        if st.button("🗑", key=f"{key_prefix}_delete", width="stretch"):
                             st.session_state.task_to_delete = original_idx
-                            st.session_state.action_id = str(uuid.uuid4())
+                            st.rerun()
 
                 with col2A:
                     # --- Expand/Collapse ---
