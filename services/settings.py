@@ -405,7 +405,7 @@ def settings_page(email):
                         course_groups.append(new_group)
                         user_data['course_groups'] = course_groups
                         update_user_data(email, user_data)
-                        st.success(f"Added task: {new_group['name']}")
+                        st.success(f"Added Course Group: {new_group['name']}")
                         st.rerun()
                     elif new_group in course_groups:
                         st.warning("Course Group already exists.")
@@ -526,6 +526,71 @@ def settings_page(email):
         #         st.write(f"{color}")
 
         # Option to reset courses list
+
+        st.header("Edit Course Groups")
+
+        with st.expander("Edit Course Groups", expanded=False):
+            with st.form("Editing Course Groups"):
+                tab1, tab2 = st.tabs(["Edit Course Group", "Delete Course Group"])
+
+                # Edit Course Group Tab
+                with tab1:
+                    group_to_edit = st.selectbox("Select Group to Edit", group_name_to_group.keys())
+
+                    new_group_name = st.text_input("Please Enter The New Name of The Group")
+                    submitted_edited_group_list = st.form_submit_button("Submit Replacement Course Group")
+
+                # Delete Course Group Tab
+                with tab2:
+                    group_to_delete = st.selectbox("Please Select the Course Group to be Deleted", group_name_to_group.keys())
+                    st.warning("This will permanently delete the course group including all courses, tasks and completed tasks associated with the course group")
+                    submitted_group_to_delete = st.form_submit_button("Submit Course Group to Delete")
+
+        
+        # EDIT COURSE GROUP NAME
+        if submitted_edited_group_list and new_group_name.strip():
+
+            for group in user_data["course_groups"]:
+                if group.get("name") == group_to_edit:
+                    group["name"] = new_group_name.strip()
+                    break
+
+            # Update selected group name if it was renamed
+            if user_data.get("selected_course_group") == group_to_edit:
+                user_data["selected_course_group"] = new_group_name.strip()
+                st.session_state.selected_course_group = new_group_name.strip()
+
+            update_user_data(email, user_data)
+            st.success("Course group renamed successfully")
+            st.rerun()
+
+
+        # DELETE COURSE GROUP
+        if submitted_group_to_delete:
+
+            user_data["course_groups"] = [
+                g for g in user_data["course_groups"]
+                if g.get("name") != group_to_delete
+            ]
+
+            # Handle selected group deletion safely
+            remaining_groups = user_data["course_groups"]
+
+            if not remaining_groups:
+                user_data["selected_course_group"] = None
+                st.session_state.selected_course_group = None
+            else:
+                new_selected = remaining_groups[0]["name"]
+                user_data["selected_course_group"] = new_selected
+                st.session_state.selected_course_group = new_selected
+
+            update_user_data(email, user_data)
+            st.success("Course group deleted successfully")
+            st.rerun()
+
+
+
+
         st.header("Edit Course List")
 
         with st.expander("Edit Course List", expanded=False):
