@@ -326,7 +326,10 @@ def home_page(email):
 
 
     # Fetch user data
-    user_data = get_user_data(email)
+    if "user_data" not in st.session_state:
+        st.session_state.user_data = get_user_data(email)
+
+    user_data = st.session_state.user_data
 
     # Get the data from database to edit within application
     courses = user_data.get("courses_list", [])
@@ -542,6 +545,7 @@ def home_page(email):
             completed_task["completion_date"] = datetime.utcnow().date().isoformat()
 
             user_data.setdefault("complete_tasks", []).append(completed_task)
+            st.session_state.user_data = user_data
             update_user_data(email, user_data)
 
             st.session_state.task_to_complete = None
@@ -562,7 +566,9 @@ def home_page(email):
             idx = st.session_state.task_to_delete
 
             user_data["tasks"].pop(idx)
+            st.session_state.user_data = user_data
             update_user_data(email, user_data)
+          
 
             st.session_state.task_to_delete = None
             st.session_state.task_to_complete = None
