@@ -1363,9 +1363,9 @@ def home_page(email):
 
 
 
-                for index, task in enumerate(user_data['tasks']):
-                    color_index = user_data['courses_list'].index(task['course'])
-                    color = user_data['courses_colors'][color_index]
+                for index, task in enumerate(selected_group['tasks']):
+                    color_index = selected_group['courses_list'].index(task['course'])
+                    color = selected_group['courses_colors'][color_index]
                     due_date = str(task['due_date'])
 
                     events.append(
@@ -1596,7 +1596,7 @@ def home_page(email):
 
 
 
-                for index, task in enumerate(user_data['tasks']):
+                for index, task in enumerate(selected_group['tasks']):
                     color_index = selected_group['courses_list'].index(task['course'])
                     color = selected_group['courses_colors'][color_index]
                     due_date = str(task['due_date'])
