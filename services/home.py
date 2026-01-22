@@ -23,64 +23,7 @@ key = st.secrets['connections']['SUPABASE_KEY']
 supabase: Client = create_client(url, key)
 
 
-# The Background
-def background():
-    page_element = """
-    <style>
 
-
-    /* Outer header container */
-    header[data-testid="stHeader"] {
-        background: rgba(0,0,0,0) !important;
-        backdrop-filter: none !important;
-        box-shadow: none !important;
-    }
-
-    /* Inner toolbar block */
-    header[data-testid="stHeader"] > div:first-child {
-        background: transparent !important;
-        box-shadow: none !important;
-        backdrop-filter: none !important;
-    }
-
-    /* Streamlit’s banner subcontainer */
-    header[data-testid="stHeader"] div[role="banner"] {
-        background: transparent !important;
-        box-shadow: none !important;
-        backdrop-filter: none !important;
-    }
-
-    /* All nested elements must not re-apply tint */
-    header[data-testid="stHeader"] * {
-        background: transparent !important;
-    }
-
-
-    
-    [data-testid="stApp"] {
-        background-image: url("https://cdn.wallpapersafari.com/58/75/Ut1h5g.jpg");
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
-    }
-
-    [data-testid="stAppViewContainer"] {
-        background: transparent !important;
-    }
-
-    [data-testid="stSidebar"],
-    [data-testid="stSidebar"] > div:first-child {
-        background: transparent !important;
-    }
-
-    </style>
-    """
-
-    st.markdown(page_element, unsafe_allow_html=True)
-background()
-
-
-# Frosted Glass Theme CSS
 
 
 # Setting The User Session

@@ -19,7 +19,6 @@ from supabase import create_client, Client
 
 
 
-
 def background():
     page_element = """
     <style>
@@ -79,6 +78,199 @@ def background():
 
     st.markdown(page_element, unsafe_allow_html=True)
 background()
+
+
+# Frosted Glass Theme CSS
+st.markdown("""
+<style>
+/* --- Buttons --- */
+button[kind="secondary"], button[kind="primary"], div.stButton > button {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    color: white !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    backdrop-filter: blur(6px);
+    transition: 0.3s ease-in-out;
+    border-radius: 8px;
+}
+
+/* Button hover */
+div.stButton > button:hover {
+    background-color: rgba(255, 255, 255, 0.25) !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+}
+            
+/*******************************************************
+ SELECTBOX DROPDOWN CONTAINER (POPOVER)
+*******************************************************/
+div[data-baseweb="popover"] {
+    background: rgba(30, 30, 30, 0.45) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+
+    border-radius: 12px !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.12),
+        0 12px 30px rgba(0,0,0,0.45);
+}
+
+/*******************************************************
+ LISTBOX (OPTIONS CONTAINER)
+*******************************************************/
+ul[role="listbox"] {
+    background: transparent !important;
+    padding: 6px !important;
+    border-radius: 10px !important;
+}
+
+/*******************************************************
+ INDIVIDUAL OPTIONS
+*******************************************************/
+li[role="option"] {
+    background: transparent !important;
+    color: white !important;
+    border-radius: 8px !important;
+    padding: 8px 10px !important;
+    transition: background 0.15s ease-in-out;
+}
+
+li[role="option"]:hover {
+    background: rgba(255, 255, 255, 0.15) !important;
+}
+
+li[role="option"][aria-selected="true"] {
+    background: rgba(255, 255, 255, 0.25) !important;
+}
+
+/* --- Dialogs / Modals --- */
+.stDialog, .stModal, div[data-testid="stModal"], div[data-testid="stDialog"] {
+    background-color: rgba(30, 30, 30, 0.4) !important;
+    color: white !important;
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+/* Inner containers in dialogs */
+.stDialog div, .stModal div {
+    background-color: transparent !important;
+}
+
+/* --- Inputs / Textareas / Selects (EXCEPT Color Picker) --- */
+input:not([type="color"]), select, textarea {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: white !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    border-radius: 6px;
+}
+
+/* --- Restore Color Picker --- */
+input[type="color"] {
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    height: 2.5rem !important;
+    width: 3rem !important;
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0 !important;
+}
+
+input[type="color"]::-webkit-color-swatch {
+    border-radius: 8px !important;
+    border: 2px solid rgba(255, 255, 255, 0.6) !important;
+}
+
+input[type="color"]::-moz-color-swatch {
+    border-radius: 8px !important;
+    border: 2px solid rgba(255, 255, 255, 0.6) !important;
+}
+
+/* --- Popovers (expanded content) --- */
+div[data-baseweb="popover"] {
+    background-color: rgba(30, 30, 30, 0.4) !important; 
+    color: white !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    box-shadow: none !important;
+    backdrop-filter: blur(10px) !important;
+}
+
+/* Let Color Picker content show properly */
+div[data-baseweb="popover"] [data-baseweb="color-picker"] * {
+    background: initial !important;
+    color: initial !important;
+}
+
+/* --- Top Header / Nav Bar --- */
+header[data-testid="stHeader"] {
+    background-color: rgba(30, 30, 30, 0.4) !important;
+    backdrop-filter: blur(10px);
+    border-bottom: none !important;
+    box-shadow: none !important;
+}
+
+/* Keep icons and text visible */
+header[data-testid="stHeader"] * {
+    color: white !important;
+}
+
+/* --- Buttons in the top bar --- */
+header[data-testid="stHeader"] button {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    color: white !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    backdrop-filter: blur(6px);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-weight: bold;
+    transition: 0.3s ease-in-out;
+}
+
+/* Hover effect for buttons */
+header[data-testid="stHeader"] button:hover {
+    background-color: rgba(255, 255, 255, 0.25) !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Optional: make main content match frosted theme */
+.main .block-container {
+    background-color: rgba(30, 30, 30, 0.3) !important;
+    border-radius: 12px;
+    padding: 20px;
+    backdrop-filter: blur(10px);
+}
+
+/* Transparent container with borders and frosted glass */
+.task-container {
+    background-color: rgba(0, 0, 0, 0) !important;
+    color: white !important;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    padding: 15px;
+    margin-top: 5px;
+    margin-bottom: 10px;
+    backdrop-filter: blur(10px);
+}
+
+            
+
+</style>
+
+<script>
+function toggleExpander(index) {
+    const all = document.querySelectorAll('.frosted-expander-content');
+    all.forEach(div => {
+        if (div.id === `expander-${index}`) {
+            div.classList.toggle('show');
+        } else {
+            div.classList.remove('show');
+        }
+    });
+}
+</script>
+""", unsafe_allow_html=True)
 
 
 
