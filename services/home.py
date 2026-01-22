@@ -71,6 +71,7 @@ def get_user_data(email):
 
 
 
+
 # Initialize sectioned task list session state
 if "today_tasks" not in st.session_state:
     st.session_state["today_tasks"] = []
@@ -93,21 +94,40 @@ def get_week_bounds():
 user_data = get_user_data(st.session_state['username'])
 today, start, end = get_week_bounds()
 
+
+course_groups = user_data.get("course_groups", [])
+    
+
+group_name_to_group = {
+(g.get("name") or f"Group {i+1}"): g
+for i, g in enumerate(course_groups)
+}
+
+selected_group_name = user_data['selected_course_group']
+
+if selected_group_name not in group_name_to_group:
+    selected_group_name = next(iter(group_name_to_group))
+    st.session_state.selected_course_group = selected_group_name
+
+selected_group = group_name_to_group[selected_group_name]
+
+selected_group.setdefault("courses_list", [])
+selected_group.setdefault("courses_colors", [])
+
+
 def parse(d):
         return datetime.fromisoformat(d).date()  # all tasks stored as strings
 todays_tasks = [
         task["name"]
-        for task in user_data['tasks']
+        for task in selected_group['tasks']
         if parse(task["due_date"]) == today
     ]
 
 this_weeks_tasks = [
     task["name"]
-    for task in user_data['tasks']
+    for task in selected_group['tasks']
     if start <= parse(task["due_date"]) <= end and parse(task["due_date"]) != today
 ]
-
-
 
 
 # Function to Update Supabase Database 
